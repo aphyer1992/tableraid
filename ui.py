@@ -1,0 +1,274 @@
+import tkinter as tk
+from figure import FigureType
+from coords import Coords
+
+class GameUI:
+    def __init__(self, map, heroes):
+        self.map = map
+        self.heroes = heroes
+        self.root = tk.Tk()
+        self.root.title("Tableraid")
+        self.left_panel = tk.Frame(self.root)
+        self.left_panel.pack(side=tk.LEFT, fill=tk.Y)
+        self.map_panel = tk.Frame(self.root)
+        self.map_panel.pack(side=tk.LEFT, padx=20, pady=20)
+        self.right_panel = tk.Frame(self.root, width=200, bg="#e0e0e0")
+        self.right_panel.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.hero_rows = []
+        self.placement_queue = [hero for hero in heroes]
+        self.placing = True
+
+        # used to prompt for hero actions
+        self.select_mode = None
+        self.valid_choices = []
+        self.select_color = None
+        self.select_cmd = None
+
+        self.setup_placement()
+        self.draw_everything()
+        self.update_placement_label()
+
+    def setup_placement(self):
+        self.select_mode = 'hero_placement'
+        self.valid_choices = [Coords(x, y) for y in range(self.map.height - 2, self.map.height) for x in range(self.map.width)]
+        self.select_color = "lightblue"
+        self.select_cmd = lambda coords: self.place_hero(coords.x, coords.y)
+
+    def update_placement_label(self):
+        if hasattr(self, "placement_label"):
+            self.placement_label.destroy()
+        if self.placement_queue:
+            hero = self.placement_queue[0]
+            self.placement_label = tk.Label(self.left_panel, text=f"Place {hero.name}")
+            self.placement_label.pack()
+        else:
+            self.placement_label = tk.Label(self.left_panel, text="All heroes placed!")
+            self.placement_label.pack()
+
+    def place_hero(self, x, y):
+        hero = self.placement_queue.pop(0)
+        self.map.add_figure(hero.figure, Coords(x, y))
+        if self.placement_queue:
+            self.valid_choices.remove(Coords(x, y))  # Remove the placed hero's position from valid choices
+            self.update_placement_label()
+            self.draw_map()
+        else:
+            self.select_mode = None
+            self.placement_label.destroy()
+            self.draw_hero_panel()
+            self.draw_map()
+
+    def draw_hero_panel(self):
+        # Clear previous
+        for widget in self.left_panel.winfo_children():
+            widget.destroy()
+
+        hero_figures = self.map.get_figures_by_type(FigureType.HERO)
+        for hero_figure in hero_figures:
+            hero = hero_figure.hero
+            frame = tk.Frame(self.left_panel, borderwidth=2, relief="groove", padx=2, pady=2)
+            frame.pack(fill=tk.X, pady=4)
+
+            # Add hero name label
+            name_label = tk.Label(frame, text=hero.name, width=12, anchor="w")
+            name_label.pack(side=tk.LEFT, padx=2)
+            # Add hero health label
+            health_label = tk.Label(frame, text=f"HP {hero_figure.current_health}/{hero_figure.max_health}", width=6, anchor="w")
+            health_label.pack(side=tk.LEFT, padx=2)
+            # Add hero energy label
+            energy_label = tk.Label(frame, text=f"Energy {hero.current_energy}", width=8, anchor="w")
+            energy_label.pack(side=tk.LEFT, padx=2)
+
+            # Top row: Activate, Move, Attack
+            top_row = tk.Frame(frame)
+            top_row.pack(fill=tk.X)
+            btn_activate = tk.Button(
+                top_row, text="Activate",
+                command=lambda h=hero: self.activate_hero(h),
+                state=tk.NORMAL if not hero.activated else tk.DISABLED,
+                width=8
+            )
+            btn_activate.pack(side=tk.LEFT, padx=1)
+            btn_move = tk.Button(
+                top_row, text="Move",
+                command=lambda h=hero: self.hero_basic_move_action(h),
+                state=tk.NORMAL if hero.move_available else tk.DISABLED,
+                width=8
+            )
+            btn_move.pack(side=tk.LEFT, padx=1)
+            btn_attack = tk.Button(
+                top_row, text="Attack",
+                command=lambda h=hero: self.hero_basic_attack_action(h),
+                state=tk.NORMAL if hero.attack_available else tk.DISABLED,
+                width=8
+            )
+            btn_attack.pack(side=tk.LEFT, padx=1)
+
+            # Bottom row: Abilities
+            bottom_row = tk.Frame(frame)
+            bottom_row.pack(fill=tk.X)
+            for ability in hero.abilities:
+                btn = tk.Button(
+                    bottom_row,
+                    text=ability.name,
+                    command=lambda h=hero, a=ability: self.use_ability(h, a),
+                    state=tk.NORMAL if ability.is_castable() else tk.DISABLED,
+                    width=12
+                )
+                btn.pack(side=tk.LEFT, padx=1)
+        self.end_round_button = tk.Button(self.left_panel, text="End Round", command=self.end_round)
+        self.end_round_button.pack(side=tk.BOTTOM, pady=10)
+
+    def draw_map(self):
+        # Clear previous
+        for widget in self.map_panel.winfo_children():
+            widget.destroy()
+
+        if hasattr(self, 'select_mode') and not len(self.valid_choices):
+            print("No valid choices for selection mode, resetting.")
+            self.select_mode = None
+
+        for y in range(self.map.height):
+            for x in range(self.map.width):
+                cell = self.map.cell_contents[y][x]
+                if cell:
+                    text = cell[0].get_representation()  # Get representation of the figure
+                else:
+                    text = " "
+                
+                if hasattr(self, 'select_mode') and self.select_mode and Coords(x, y) in self.valid_choices:    
+                    bg_color = self.select_color
+                    cmd = lambda _e, x=x, y=y: self.select_cmd(Coords(x, y))
+                else:
+                    bg_color = "white"
+                    cmd = None
+                
+                # Check if this cell is in any special path
+                for path in self.map.encounter.special_tiles.values():
+                    if Coords(x, y) in path["coords"]:
+                        bg_color = path["color"]
+                        break
+
+                lbl = tk.Label(self.map_panel, text=text, width=6, height=3, borderwidth=1, relief="solid", bg=bg_color)
+                if cmd is not None:
+                    lbl.bind("<Button-1>", cmd)
+                lbl.grid(row=y, column=x)
+    
+    def draw_boss_window(self):
+        # Clear previous card
+        for widget in self.right_panel.winfo_children():
+            widget.destroy()
+
+        card_frame = tk.Frame(self.right_panel, bg="#f8f4e3", bd=3, relief="ridge", padx=10, pady=10)
+        card_frame.pack(pady=30, padx=20, fill=tk.BOTH, expand=True)
+
+        name_label = tk.Label(card_frame, text=self.map.encounter.next_card['name'], font=("Arial", 16, "bold"), bg="#f8f4e3")
+        name_label.pack(pady=(0, 10))
+
+        text_label = tk.Label(card_frame, text=self.map.encounter.next_card['text'], font=("Arial", 12), wraplength=160, justify="left", bg="#f8f4e3")
+        text_label.pack()
+    
+    def draw_everything(self):
+        self.draw_hero_panel()
+        self.draw_map()
+        self.draw_boss_window()
+
+    def end_round(self):
+        self.map.end_hero_turn()
+        self.map.execute_boss_turn()
+        self.map.begin_hero_turn()
+        # Reset UI for new hero turn
+        self.draw_everything()
+
+
+    def activate_hero(self, hero):
+        hero.activate()
+        self.draw_hero_panel()
+
+    def hero_basic_move_action(self, hero):
+        self.hero_move(hero, costs_move_action=True)
+
+    def hero_move(self, hero, move_distance=None, costs_move_action=False):
+        if move_distance is None:
+            move_distance = hero.archetype['move']
+        self.select_mode = 'hero_move'
+        self.valid_choices = hero.get_valid_move_destinations(move_distance)
+        self.select_color = "lightgreen"
+        self.select_cmd = lambda coords: self.execute_move(hero, coords, costs_move_action)
+        self.draw_map()
+    
+    def execute_move(self, hero, coords, costs_move_action=False):
+        self.map.move_figure(hero.figure, coords)
+        if costs_move_action:
+            hero.move_available = False
+        self.select_mode = None
+        self.draw_map()
+        self.draw_hero_panel()
+
+    def hero_basic_attack_action(self, hero):
+        self.hero_attack(hero, costs_attack_action=True)
+
+    def hero_attack(self, hero, range=None, physical_damage=None, elemental_damage=None, costs_attack_action=False):
+        if physical_damage is None:
+            physical_damage = hero.archetype['physical_dmg']
+        if elemental_damage is None:
+            elemental_damage = hero.archetype['elemental_dmg']
+        if range is None:
+            range = hero.archetype['attack_range']
+        targets = hero.get_valid_attack_targets(range)
+        targets_dict = {t.position: t for t in targets}  # Use a dictionary for quick access
+        if not targets:
+            print(f"No valid attack targets for {hero.name}")
+            return
+        self.select_mode = 'hero_attack'
+        self.valid_choices = [t.position for t in targets]  # Use targets as valid moves for attack selection   
+        self.select_color = "#ff2222"
+        self.select_cmd = lambda coords: self.execute_attack(hero.figure, targets_dict[coords], physical_damage, elemental_damage, costs_attack_action)
+        self.draw_map()
+
+    def execute_attack(self, attacking_figure, target_figure, physical_damage, elemental_damage, costs_attack_action=False):
+        if target_figure:
+            self.map.deal_damage(attacking_figure, target_figure, physical_damage, elemental_damage)
+        if costs_attack_action and attacking_figure.figure_type == FigureType.HERO:
+            attacking_figure.hero.attack_available = False
+        self.select_mode = None
+        self.draw_map()
+        self.draw_hero_panel()
+
+    def choose_friendly_target(self, coords, range, callback_fn):
+        valid_targets = self.map.get_figures_in_range(coords, range)
+        valid_targets = [f for f in valid_targets if f.figure_type == FigureType.HERO]
+        if not valid_targets:
+            print("No valid friendly targets in range")
+            return None
+        self.select_mode = 'choose_friendly_target'
+        self.valid_choices = [f.position for f in valid_targets]
+        self.select_color = "lightgreen"
+        targets_dict = {f.position: f for f in valid_targets}
+
+        def wrapped_callback(coords):
+            callback_fn(targets_dict[coords])
+            self.select_mode = None
+            self.draw_map()
+            self.draw_hero_panel()
+
+        self.select_cmd = wrapped_callback
+        self.draw_map()
+
+    def use_ability(self, hero, ability):
+        # Placeholder: call the ability's effect function
+        if ability.is_castable():
+            hero.spend_energy(ability.energy_cost)
+            ability.effect_fn(hero.figure, ability.energy_cost, ui=self)  # No x-cost for now
+            ability.used = True
+            print(f"{hero.name} used {ability.name}")
+            self.draw_map()  # Redraw map if needed
+
+    def run(self):
+        self.root.mainloop()
+
+# Usage example (in your main.py or similar):
+# from ui import GameUI
+# game_ui = GameUI(map)
+# game_ui.run()
