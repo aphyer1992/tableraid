@@ -1,9 +1,9 @@
 def condition_listener(figure):
     for condition, duration in figure.conditions.items():
         if condition == "Burn":
-            figure.map.deal_damage("Burning condition", figure, 1, 'Elemental')
+            figure.map.deal_damage("Burning condition", figure, physical_damage=0, elemental_damage=1)
         elif condition == "Bleed":
-            figure.map.deal_damage("Bleeding condition", figure, 1, 'Physical')
+            figure.map.deal_damage("Bleeding condition", figure, physical_damage=1, elemental_damage=0)
         elif condition == "Regen":
             figure.heal(1)
 

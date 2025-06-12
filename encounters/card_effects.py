@@ -43,13 +43,11 @@ def sael_storm_shield(map, sael):
     storm_shield_pulse(map)
 
 def sael_icicle_shards(map, sael):
-    print("A\n")
     basic_action(map, sael)
-    print("B\n")
+    
     heroes = map.get_figures_by_type(FigureType.HERO)
     print(heroes)
     for hero in heroes:
-        print('Ping')
         dmg_dealt = map.deal_damage(sael, hero, physical_damage=1, elemental_damage=0)
         if dmg_dealt > 0:
             hero.add_condition("Bleed", hero.max_health - hero.current_health)

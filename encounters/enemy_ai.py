@@ -33,16 +33,14 @@ def basic_action(map, figure):
         print(f"No targetable heroes found for {figure.name}.")
         return 0 # no targetable heroes, so do nothing
     print(f"Enemy AI: {figure.name} is targeting {target_hero.name} at position {target_hero.position}.")
-    
+
     make_enemy_move(figure, target_hero, map, figure.move, figure.impassible_types)
     
     if map.distance_between(figure.position, target_hero.position) <= figure.attack_range:
-        physical_dealt = map.deal_damage(figure, target_hero, figure.physical_dmg, 'Physical')
-        elemental_dealt = map.deal_damage(figure, target_hero, figure.elemental_dmg, 'Elemental')
-        return physical_dealt + elemental_dealt
-    
-    return 0
+        dmg_dealt = map.deal_damage(figure, target_hero, figure.physical_dmg, figure.elemental_dmg)
+        return dmg_dealt
 
+    return 0
 
 def make_enemy_move(enemy, player, game_map, move_range, impassible_types):
     # Get all orthogonally adjacent squares to the player
