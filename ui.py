@@ -74,7 +74,7 @@ class GameUI:
             # Add hero name label
             name_label = tk.Label(frame, text=hero.name, width=12, anchor="w")
             name_label.pack(side=tk.LEFT, padx=2)
-            # Add hero health label
+            # Add hero health label and
             health_label = tk.Label(frame, text=f"HP {hero_figure.current_health}/{hero_figure.max_health}", width=6, anchor="w")
             health_label.pack(side=tk.LEFT, padx=2)
             # Add hero energy label
@@ -153,9 +153,9 @@ class GameUI:
 
             if include and quantity > 0:
                 if details['position'] == 'right':
-                    right_effects.append(f"{details['icon']} {quantity}")
+                    right_effects.append({"text": f"{details['icon']} {quantity}", "color": details['color']})
                 elif details['position'] == 'left':
-                    left_effects.append(f"{details['icon']} {quantity}")
+                    left_effects.append({"text": f"{details['icon']} {quantity}", "color": details['color']})
 
         return {
             "center": base_text,
@@ -202,12 +202,12 @@ class GameUI:
 
                 # Right effects (stacked from bottom up)
                 for i, eff in enumerate(reversed(rep["right_effects"])):
-                    eff_label = tk.Label(cell_frame, text=eff, font=("Arial", 7), bg=bg_color)
+                    eff_label = tk.Label(cell_frame, text=eff['text'], fg=eff['color'], font=("Arial", 7), bg=bg_color)
                     eff_label.place(relx=1.0, rely=1.0 - i*0.18, anchor="se")
 
                 # Left effects (stacked from bottom up)
                 for i, eff in enumerate(reversed(rep["left_effects"])):
-                    eff_label = tk.Label(cell_frame, text=eff, font=("Arial", 7), bg=bg_color)
+                    eff_label = tk.Label(cell_frame, text=eff['text'], fg=eff['color'], font=("Arial", 7), bg=bg_color)
                     eff_label.place(relx=0.0, rely=1.0 - i*0.18, anchor="sw")
 
                 if cmd is not None:
