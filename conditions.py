@@ -7,10 +7,10 @@ def condition_listener(figure):
         elif condition == "Regen":
             figure.heal(1)
 
-        if duration > 1:
-            figure.conditions[condition] -= 1
-        else:
-            del figure.conditions[condition]
+        figure.conditions[condition] -= 1
+    
+    # remove any that have timed out.
+    figure.conditions = {k: v for k, v in figure.conditions.items() if v > 0}
 
 def slow_listener(figure, move_data):
     if "Slowed" in figure.conditions:

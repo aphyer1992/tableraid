@@ -1,6 +1,7 @@
 import tkinter as tk
 from figure import FigureType
 from coords import Coords
+from effects_display import EFFECTS_DISPLAY
 
 class GameUI:
     def __init__(self, map, heroes):
@@ -120,6 +121,48 @@ class GameUI:
         self.end_round_button = tk.Button(self.left_panel, text="End Round", command=self.end_round)
         self.end_round_button.pack(side=tk.BOTTOM, pady=10)
 
+    def get_figure_representation(self, cell_contents):
+        if not cell_contents:
+            return " "
+        if len(cell_contents) > 1:
+            front_figures = [f for f in cell_contents if f.figure_type != FigureType.MARKER]
+            if front_figures:
+                assert(len(front_figures) == 1), "There should be only one front figure in a cell"
+                figure = front_figures[0]
+            else:
+                figure = cell_contents[0]
+        else:
+            figure = cell_contents[0]
+
+        right_effects = []
+        left_effects = []
+        base_text = figure.get_representation_text()
+        for effect, details in EFFECTS_DISPLAY.items():
+            if details['is_condition']:
+                if effect in figure.conditions:
+                    include = True
+                    quantity = figure.conditions[effect]
+                else:
+                    include = False
+            else:
+                if effect in figure.active_effects:
+                    include = True
+                    quantity = figure.active_effects[effect]
+                else:
+                    include = False
+
+            if include and quantity > 0:
+                if details['position'] == 'right':
+                    right_effects.append(f"{details['icon']} {quantity}")
+                elif details['position'] == 'left':
+                    left_effects.append(f"{details['icon']} {quantity}")
+
+        return {
+            "center": base_text,
+            "right_effects": right_effects,
+            "left_effects": left_effects,
+        }
+
     def draw_map(self):
         # Clear previous
         for widget in self.map_panel.winfo_children():
@@ -133,10 +176,10 @@ class GameUI:
             for x in range(self.map.width):
                 cell = self.map.cell_contents[y][x]
                 if cell:
-                    text = cell[0].get_representation()  # Get representation of the figure
+                    rep = self.get_figure_representation(cell)
                 else:
-                    text = " "
-                
+                    rep = {"center": " ", "right_effects": [], "left_effects": []}
+
                 if hasattr(self, 'select_mode') and self.select_mode and Coords(x, y) in self.valid_choices:    
                     bg_color = self.select_color
                     cmd = lambda _e, x=x, y=y: self.select_cmd(Coords(x, y))
@@ -150,11 +193,31 @@ class GameUI:
                         bg_color = path["color"]
                         break
 
-                lbl = tk.Label(self.map_panel, text=text, width=6, height=3, borderwidth=1, relief="solid", bg=bg_color)
+                cell_frame = tk.Frame(self.map_panel, width=65, height=65, bg=bg_color, borderwidth=1, relief="solid")
+                cell_frame.grid_propagate(False)  # Prevent resizing to fit contents
+
+                # Center: main figure info
+                center_label = tk.Label(cell_frame, text=rep["center"], bg=bg_color)
+                center_label.place(relx=0.5, rely=0.5, anchor="center")
+
+                # Right effects (stacked from bottom up)
+                for i, eff in enumerate(reversed(rep["right_effects"])):
+                    eff_label = tk.Label(cell_frame, text=eff, font=("Arial", 7), bg=bg_color)
+                    eff_label.place(relx=1.0, rely=1.0 - i*0.18, anchor="se")
+
+                # Left effects (stacked from bottom up)
+                for i, eff in enumerate(reversed(rep["left_effects"])):
+                    eff_label = tk.Label(cell_frame, text=eff, font=("Arial", 7), bg=bg_color)
+                    eff_label.place(relx=0.0, rely=1.0 - i*0.18, anchor="sw")
+
                 if cmd is not None:
-                    lbl.bind("<Button-1>", cmd)
-                lbl.grid(row=y, column=x)
-    
+                    cell_frame.bind("<Button-1>", cmd)
+                    center_label.bind("<Button-1>", cmd)
+                    # Optionally bind effect labels too
+
+                cell_frame.grid(row=y, column=x)
+
+                
     def draw_boss_window(self):
         # Clear previous card
         for widget in self.right_panel.winfo_children():
@@ -180,7 +243,6 @@ class GameUI:
         self.map.begin_hero_turn()
         # Reset UI for new hero turn
         self.draw_everything()
-
 
     def activate_hero(self, hero):
         hero.activate()
@@ -237,7 +299,7 @@ class GameUI:
         self.draw_hero_panel()
 
     def choose_friendly_target(self, coords, range, callback_fn):
-        valid_targets = self.map.get_figures_in_range(coords, range)
+        valid_targets = self.map.get_figures_within_distance(coords, range)
         valid_targets = [f for f in valid_targets if f.figure_type == FigureType.HERO]
         if not valid_targets:
             print("No valid friendly targets in range")
@@ -263,7 +325,7 @@ class GameUI:
             ability.effect_fn(hero.figure, ability.energy_cost, ui=self)  # No x-cost for now
             ability.used = True
             print(f"{hero.name} used {ability.name}")
-            self.draw_map()  # Redraw map if needed
+            self.draw_everything()
 
     def run(self):
         self.root.mainloop()

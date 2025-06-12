@@ -87,7 +87,7 @@ class EncounterSael(EncounterBase):
         self.card_list = sael_cards
         self.biting_cold_counters = 0
         self.shuffle_deck()
-        self.next_card = self.get_next_card()
+        self.get_next_card()
         self.setup_blizzard_path()
 
     def setup_blizzard_path(self):
@@ -109,7 +109,7 @@ class EncounterSael(EncounterBase):
         if len(self.deck) == 0:
             self.shuffle_deck()
 
-        return(self.deck.pop(0))
+        self.next_card = self.deck.pop(0)
     
     def get_deployment_zone(self):
         zone = []

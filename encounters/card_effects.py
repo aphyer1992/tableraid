@@ -44,7 +44,7 @@ def sael_storm_shield(map, sael):
 
 def sael_icicle_shards(map, sael):
     basic_action(map, sael)
-    
+
     heroes = map.get_figures_by_type(FigureType.HERO)
     print(heroes)
     for hero in heroes:
@@ -67,7 +67,7 @@ def sael_frost_tomb(map, sael):
     tomb = Figure("Frost Tomb", FigureType.MARKER, health=5, physical_def=5, elemental_def=4, move=0)
     map.add_figure(tomb, target_hero.position, on_occupied='colocate')
     target_hero.targetable = False
-    target_hero.add_condition("Stunned", 999)
+    target_hero.add_condition("Stunned", 99)
 
     def tomb_damage_listener(figure):
         if figure == target_hero:

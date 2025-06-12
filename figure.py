@@ -56,7 +56,7 @@ class Figure:
         self.map.events.trigger("get_move", figure=self, move_data=move_data)
         return move_data["value"]
 
-    def get_representation(self):
+    def get_representation_text(self):
         if self.fixed_representation:
             return self.fixed_representation
         elif self.figure_type == FigureType.HERO:
