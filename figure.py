@@ -87,12 +87,12 @@ class Figure:
     
     def take_damage(self, physical_damage, elemental_damage, damage_source=None, reduce_health=True):
         rolls = [self.roll_defense('Physical', damage_source) for _ in range(physical_damage)] + [self.roll_defense('Elemental', damage_source) for _ in range(elemental_damage)]
-        damage_taken = sum(1 for roll in rolls if not roll)
-        self.map.events.trigger("damage_taken", figure=self, physical_damage=physical_damage, elemental_damage=elemental_damage, damage_source=damage_source)
+        damage_taken = {'damage_taken' : sum(1 for roll in rolls if not roll)} # defined this way so listeners can edit.
+        self.map.events.trigger("damage_taken", figure=self, damage_taken=damage_taken, damage_source=damage_source)
         if reduce_health:
-            self.lose_health(damage_taken, source=damage_source)
+            self.lose_health(damage_taken['damage_taken'], source=damage_source)
 
-        return(damage_taken)   
+        return(damage_taken['damage_taken'])   
     
     def lose_health(self, amount, source=None):
         if amount < 0:

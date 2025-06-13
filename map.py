@@ -300,7 +300,7 @@ class Map:
         self.heroes_activated = 0
         for hero_figure in self.get_figures_by_type(FigureType.HERO):
             hero_figure.hero.reset_turn()
-            self.events.trigger("start_action", figure=hero_figure)
+            self.events.trigger("start_figure_action", figure=hero_figure)
     
     def end_hero_turn(self):
         for hero_figure in self.get_figures_by_type(FigureType.HERO):
