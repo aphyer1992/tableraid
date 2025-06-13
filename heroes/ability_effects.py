@@ -120,7 +120,7 @@ def mage_fireball(figure, energy_spent, ui=None):
         elemental_damage=4,
         range=4,
         costs_attack_action=True,
-        callback_fn=mage_fireball_callback
+        after_attack_callback=mage_fireball_callback
     )
 
 def mage_fire_nova(figure, energy_spent, ui=None):
@@ -133,11 +133,13 @@ def mage_fire_nova(figure, energy_spent, ui=None):
 def mage_combustion_listener(mage_hero, figure, roll, damage_type, damage_source):
     if damage_source != mage_hero.figure:
         return
-    if figure.figure_type != FigureType.HERO and damage_type == 'Elemental':
+    if damage_type == 'Elemental' and figure.get_condition('Burn') is not None:
         if roll == 1:
+            print('Mage Combustion triggered for bonus HP and Energy!')
             mage_hero.figure.heal(1, source=mage_hero.figure)
             mage_hero.gain_energy(1)
         elif roll == figure.elemental_def: # if you just barely missed
+            print('Mage Combustion triggered for extra damage!')
             figure.lose_health(1, source=mage_hero.figure)
 
 def mage_combustion_setup(hero):

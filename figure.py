@@ -134,6 +134,9 @@ class Figure:
             del self.conditions[condition]
             self.map.events.trigger("condition_removed", figure=self, condition=condition)
 
+    def get_condition(self, condition, default_value=None):
+        return self.conditions.get(condition, default_value)
+    
     def start_action(self):
         self.map.events.trigger("start_action", figure=self)
         

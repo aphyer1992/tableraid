@@ -109,15 +109,35 @@ class GameUI:
             # Bottom row: Abilities
             bottom_row = tk.Frame(frame)
             bottom_row.pack(fill=tk.X)
+
+            # ...inside your draw_hero_panel method, in the abilities loop...
             for ability in hero.abilities:
-                btn = tk.Button(
-                    bottom_row,
-                    text=ability.name,
-                    command=lambda h=hero, a=ability: self.use_ability(h, a),
-                    state=tk.NORMAL if ability.is_castable() else tk.DISABLED,
-                    width=12
-                )
-                btn.pack(side=tk.LEFT, padx=1)
+                frame_ability = tk.Frame(bottom_row)
+                # Add more horizontal padding between abilities
+                frame_ability.pack(side=tk.LEFT, padx=6)
+
+                if ability.variable_cost:
+                    energy_var = tk.IntVar(value=1)
+                    spin = tk.Spinbox(frame_ability, from_=1, to=hero.current_energy, width=3, textvariable=energy_var)
+                    btn = tk.Button(
+                        frame_ability,
+                        text=ability.name,
+                        command=lambda h=hero, a=ability, e=energy_var: self.use_ability(h, a, e.get()),
+                        state=tk.NORMAL if ability.is_castable() else tk.DISABLED,
+                        width=12
+                    )
+                    btn.pack(side=tk.LEFT)
+                    spin.pack(side=tk.LEFT)
+                else:
+                    btn = tk.Button(
+                        frame_ability,
+                        text=ability.name,
+                        command=lambda h=hero, a=ability: self.use_ability(h, a),
+                        state=tk.NORMAL if ability.is_castable() else tk.DISABLED,
+                        width=12
+                    )
+                    btn.pack(side=tk.LEFT)
+
         self.end_round_button = tk.Button(self.left_panel, text="End Round", command=self.end_round)
         self.end_round_button.pack(side=tk.BOTTOM, pady=10)
 
@@ -320,14 +340,18 @@ class GameUI:
         self.select_cmd = wrapped_callback
         self.draw_map()
 
-    def use_ability(self, hero, ability):
-        # Placeholder: call the ability's effect function
-        if ability.is_castable():
-            hero.spend_energy(ability.energy_cost)
-            ability.effect_fn(hero.figure, ability.energy_cost, ui=self)  # No x-cost for now
-            ability.used = True
-            print(f"{hero.name} used {ability.name}")
-            self.draw_everything()
+    def use_ability(self, hero, ability, energy_amount=None):
+        assert ability.is_castable
+        
+        if energy_amount is None:
+            assert not ability.variable_cost, "Energy amount must be specified for variable cost abilities"
+            energy_amount = ability.energy_cost
+
+        hero.spend_energy(energy_amount)
+        ability.effect_fn(hero.figure, energy_amount, ui=self)  # No x-cost for now
+        ability.used = True
+        print(f"{hero.name} used {ability.name} with {energy_amount} energy")
+        self.draw_everything()
 
     def run(self):
         self.root.mainloop()
