@@ -258,7 +258,7 @@ class Map:
                 raise ValueError("No valid knockback directions found")
             
             knockback = random.choice(valid_knockbacks)
-            knocback_dx = knockback[0]
+            knockback_dx = knockback[0]
             knockback_dy = knockback[1]
 
 
