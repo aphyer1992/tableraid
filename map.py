@@ -3,6 +3,7 @@ from figure import Figure, FigureType
 from events import EventManager
 from conditions import condition_listener, slow_listener
 import math
+import random
 
 class Map:
     def __init__(self, encounter):
@@ -235,6 +236,62 @@ class Map:
         visited = self.bfs(pos1, impassible_types, target=pos2)
         return visited.get(pos2, float('inf'))
     
+    def knock_back(self, figure, knockback_origin, knockback_distance):
+        # Determine direction vector (dx, dy)
+        dx = figure.position.x - knockback_origin.x
+        dy = figure.position.y - knockback_origin.y
+        if dx == 0 and dy == 0:
+            raise("Cannot knock back figure from its own position")
+
+        remaining_distance = knockback_distance
+        diagonal_move_expensive = False
+        collided = False
+        while remaining_distance > 0 and not collided:
+            valid_knockbacks = []
+            if dx != 0 and dy != 0 and (remaining_distance > 1 or (not diagonal_move_expensive)):
+                valid_knockbacks.append((dx, dy))  # Diagonal move
+            if abs(dx) > abs(dy) or (abs(dx) == abs(dy) and diagonal_move_expensive and remaining_distance == 1):
+                valid_knockbacks.append((dx, 0))
+            if abs(dy) > abs(dx) or (abs(dx) == abs(dy) and diagonal_move_expensive and remaining_distance == 1):
+                valid_knockbacks.append((0, dy))
+
+            if not valid_knockbacks:
+                raise ValueError("No valid knockback directions found")
+            
+            knockback = random.choice(valid_knockbacks)
+            knocback_dx = knockback[0]
+            knockback_dy = knockback[1]
+
+
+            new_x = figure.position.x + knockback_dx
+            new_y = figure.position.y + knockback_dy
+            new_coords = Coords(new_x, new_y)
+
+
+            # Check map bounds
+            if not self.coords_in_bounds(new_coords):
+                collided = True
+
+            # Check for impassible terrain or figures
+            # you can move through an ally but not knockback through them
+            impassible_types = {FigureType.OBSTACLE, FigureType.HERO, FigureType.BOSS, FigureType.MINION}
+            if any(f.figure_type in impassible_types for f in self.cell_contents[new_y][new_x]):
+                collided = True
+            
+            if not collided:
+                self.move_figure(figure, new_coords)
+                move_cost = 1
+                if knockback_dx != 0 and knockback_dy != 0:
+                    if diagonal_move_expensive:
+                        move_cost = 2
+                        diagonal_move_expensive = False
+                    else:
+                        diagonal_move_expensive = True
+                remaining_distance -= move_cost
+
+        # If not moved full distance, take damage for each remaining step
+        figure.take_damage(physical_damage=remaining_distance, elemental_damage=0, damage_source="Knockback collision", reduce_health=True)
+
     def deal_damage(self, source, target, physical_damage, elemental_damage, reduce_health=True):
         damage_taken = target.take_damage(physical_damage, elemental_damage, damage_source=source, reduce_health=reduce_health)
         return damage_taken

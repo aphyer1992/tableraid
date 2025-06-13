@@ -112,9 +112,18 @@ def ranger_quick_step(figure, energy_spent, ui=None):
     assert ui
     ui.hero_move(figure.hero, move_distance=1)
 
+def mage_fireball_callback(figure, target, dmg_dealt, ui):
+    target.add_condition("Burn", 5, incremental=False)
+
 def mage_fireball(figure, energy_spent, ui=None):
-    #TODO: this might need to add a listener for the burn.
-    return
+    ui.hero_attack(
+        figure.hero,
+        physical_damage=0,
+        elemental_damage=4,
+        range=4,
+        costs_attack_action=True,
+        callback_fn=mage_fireball_callback
+    )
 
 def mage_fire_nova(figure, energy_spent, ui=None):
     in_range = figure.map.get_figures_within_distance(figure.position, 2)
