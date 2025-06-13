@@ -11,7 +11,7 @@ def sael_biting_cold_listener(figure, roll, damage_type, map):
 
 def sael_avalanche_knockback_listener(figure, damage_taken, damage_type, damage_source, map):
     if damage_type == 'Physical' and figure.figure_type == FigureType.HERO and damage_source.figure_type == FigureType.BOSS:
-        map.knock_back(figure, damage_source, damage_taken)
+        map.knock_back(figure, damage_source.position, damage_taken)
 
 
 def sael_avalanche_crush(map, sael):
@@ -23,7 +23,7 @@ def sael_avalanche_crush(map, sael):
     for i in range(3):
         basic_action(map, sael)
     
-    map.events.deregister(listener_id)
+    map.events.deregister("damage_taken", listener_id)
 
 def sael_frozen_servants(map, sael):
     basic_action(map, sael)
@@ -31,17 +31,34 @@ def sael_frozen_servants(map, sael):
     map.add_figure(Figure("Frost Elemental", FigureType.MINION, health=5, physical_def=5, elemental_def=4), Coords(0,2)) 
     map.add_figure(Figure("Frost Elemental", FigureType.MINION, health=5, physical_def=5, elemental_def=4), Coords(10,2)) 
     
+
+
 def storm_shield_pulse(map, sael):
     heroes = map.get_figures_by_type(FigureType.HERO)
     for hero in heroes:
         map.deal_damage(sael, hero, physical_damage=0, elemental_damage=1, reduce_hp=True)
 
+def storm_shield_listener(map, sael, listener):
+    if sael.get_condition("Shielded"):
+        storm_shield_pulse(map)
+    else:
+        map.events.deregister("boss_turn_start", listener)
+
 def sael_storm_shield(map, sael):
     basic_action(map, sael)
+    sael.add_condition("Shielded", 10, incremental=True)
+    storm_shield_pulse(map, sael)
 
-    sael.shield_counters += 10
-    storm_shield_pulse(map)
+    listener_id = None  # placeholder
 
+    def shield_listener():
+        if sael.get_condition("Shielded"):
+            storm_shield_pulse(map, sael)
+        else:
+            map.events.deregister("boss_turn_start", listener_id)
+
+    listener_id = map.events.register("boss_turn_start", shield_listener)
+    
 def sael_icicle_shards(map, sael):
     basic_action(map, sael)
 

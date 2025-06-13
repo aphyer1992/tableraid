@@ -271,7 +271,7 @@ class GameUI:
     def hero_basic_attack_action(self, hero):
         self.hero_attack(hero, costs_attack_action=True)
 
-    def hero_attack(self, hero, range=None, physical_damage=None, elemental_damage=None, costs_attack_action=False):
+    def hero_attack(self, hero, range=None, physical_damage=None, elemental_damage=None, costs_attack_action=False, after_attack_callback=None):
         if physical_damage is None:
             physical_damage = hero.archetype['physical_dmg']
         if elemental_damage is None:
@@ -286,14 +286,16 @@ class GameUI:
         self.select_mode = 'hero_attack'
         self.valid_choices = [t.position for t in targets]  # Use targets as valid moves for attack selection   
         self.select_color = "#ff2222"
-        self.select_cmd = lambda coords: self.execute_attack(hero.figure, targets_dict[coords], physical_damage, elemental_damage, costs_attack_action)
+        self.select_cmd = lambda coords: self.execute_attack(hero.figure, targets_dict[coords], physical_damage, elemental_damage, costs_attack_action, after_attack_callback)
         self.draw_map()
 
-    def execute_attack(self, attacking_figure, target_figure, physical_damage, elemental_damage, costs_attack_action=False):
+    def execute_attack(self, attacking_figure, target_figure, physical_damage, elemental_damage, costs_attack_action=False, after_attack_callback=None):
         if target_figure:
-            self.map.deal_damage(attacking_figure, target_figure, physical_damage, elemental_damage)
+            dmg_dealt = self.map.deal_damage(attacking_figure, target_figure, physical_damage, elemental_damage)
         if costs_attack_action and attacking_figure.figure_type == FigureType.HERO:
             attacking_figure.hero.attack_available = False
+        if after_attack_callback:
+            after_attack_callback(attacking_figure, target_figure, dmg_dealt, self)
         self.select_mode = None
         self.draw_map()
         self.draw_hero_panel()

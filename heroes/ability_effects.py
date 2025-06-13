@@ -23,16 +23,14 @@ def warrior_bastion(figure, energy_spent, ui=None):
 
     listener_id = figure.map.events.register("hero_turn_start", end_bastion_listener)
 
-def warrior_shield_bash(figure, energy_spent, ui=None):
-    # we still need a listener here.
-    ui.hero_attack(figure.hero, range=1, physical_damage=energy_spent, elemental_damage=0, costs_attack_action=False)
-    figure.add_effect('shield_counters', energy_spent + figure.get_effect('shield_counters', 0), overwrite=True)
-
+def warrior_shield_bash(warrior_figure, energy_spent, ui=None):
+    ui.hero_attack(warrior_figure.hero, range=1, physical_damage=energy_spent, elemental_damage=0, costs_attack_action=False)
+    warrior_figure.add_condition("Shielded", energy_spent, incremental=True)
+    
 def paladin_smite(figure, energy_spent, ui=None):
     ui.hero_attack(figure.hero, range=1, physical_damage=0, elemental_damage=5, costs_attack_action=True)
 
 def paladin_holy_shield(figure, energy_spent, ui=None):
-    # does this do damage?
     assert(figure.physical_def == 4)
     assert(figure.elemental_def == 4)
     figure.physical_def = 3

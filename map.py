@@ -1,7 +1,7 @@
 from coords import Coords
 from figure import Figure, FigureType
 from events import EventManager
-from conditions import condition_listener, slow_listener
+from conditions import setup_condition_listeners
 import math
 import random
 
@@ -21,8 +21,7 @@ class Map:
         self.heroes_activated = 0
         
         # the general condition handlers
-        self.events.register("end_figure_action", lambda figure: condition_listener(figure))
-        self.events.register("get_move", lambda figure, move_data: slow_listener(figure, move_data))
+        setup_condition_listeners(self)
 
     def get_next_figure_id(self):
         figure_id = self.next_figure_id
