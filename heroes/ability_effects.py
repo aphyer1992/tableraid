@@ -93,8 +93,7 @@ def rogue_vanish(figure, energy_spent, ui=None):
 
     listener_id = figure.map.events.register("hero_turn_start", end_vanish_listener)
 
-    # this requires something complicated with moves to be done properly.
-    figure.hero.perform_move(2)
+    ui.hero_move(figure.hero, move_distance=2, costs_move_action=False)
 
 def ranger_power_shot(figure, energy_spent, ui=None):
     ui.hero_attack(figure.hero, physical_damage=5, elemental_damage=0, range=5, costs_attack_action=True)
@@ -108,7 +107,7 @@ def ranger_spirit_link(figure, energy_spent, ui=None):
 
 def ranger_quick_step(figure, energy_spent, ui=None):
     assert ui
-    ui.hero_move(figure.hero, move_distance=1)
+    ui.hero_move(figure.hero, move_distance=1, costs_move_action=False)
 
 def mage_fireball_callback(figure, target, dmg_dealt, ui):
     target.add_condition("Burn", 5, incremental=False)
