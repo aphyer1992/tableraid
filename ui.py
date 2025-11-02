@@ -17,7 +17,8 @@ class GameUI:
         self.right_panel.pack(side=tk.RIGHT, fill=tk.Y)
 
         self.hero_rows = []
-        self.placement_queue = [hero for hero in heroes]
+        self.placement_queue = list(heroes)
+        self.placement_label = None
         self.placing = True
 
         # used to prompt for hero actions
@@ -25,6 +26,7 @@ class GameUI:
         self.valid_choices = []
         self.select_color = None
         self.select_cmd = None
+        self.end_round_button = None
 
         self.setup_placement()
         self.draw_everything()
@@ -186,7 +188,7 @@ class GameUI:
         for widget in self.map_panel.winfo_children():
             widget.destroy()
 
-        if hasattr(self, 'select_mode') and not len(self.valid_choices):
+        if hasattr(self, 'select_mode') and not self.valid_choices:
             print("No valid choices for selection mode, resetting.")
             self.select_mode = None
 
@@ -322,7 +324,7 @@ class GameUI:
         valid_targets = [f for f in valid_targets if f.figure_type == FigureType.HERO]
         if not valid_targets:
             print("No valid friendly targets in range")
-            return None
+            return
         self.select_mode = 'choose_friendly_target'
         self.valid_choices = [f.position for f in valid_targets]
         self.select_color = "lightgreen"

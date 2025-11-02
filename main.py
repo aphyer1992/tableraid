@@ -2,7 +2,6 @@ from map import Map
 from heroes.hero import Hero
 from heroes.hero_archetypes import hero_archetypes
 import ui
-from coords import Coords
 from encounters.encounter_sael import EncounterSael
 import random
 

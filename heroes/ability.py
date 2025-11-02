@@ -41,7 +41,7 @@ class Ability:
             return False
         if self.used:
             return False
-        if self.hero.activated == False and not self.usable_off_turn:
+        if not self.hero.activated and not self.usable_off_turn:
             return False
         if self.hero.current_energy < self.energy_cost:
             return False
