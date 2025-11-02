@@ -9,7 +9,7 @@ def condition_turn_end_listener(figure):
             figure.map.deal_damage("Bleeding condition", figure, physical_damage=1, elemental_damage=0)
         
         if condition in tick_down_at_end: # e.g. shield does not tick down at end of turn by default
-            figure.conditions[condition] -= 1
+            figure.conditions[condition] = duration - 1
     
     # remove any that have timed out.
     figure.conditions = {k: v for k, v in figure.conditions.items() if v > 0}
@@ -20,7 +20,7 @@ def condition_turn_start_listener(figure):
             figure.heal(1)
         
         if condition in tick_down_at_start:
-            figure.conditions[condition] -= 1
+            figure.conditions[condition] = duration - 1
     
     # remove any that have timed out.
     figure.conditions = {k: v for k, v in figure.conditions.items() if v > 0}

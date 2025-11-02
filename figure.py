@@ -30,6 +30,7 @@ class Figure:
         self.conditions = {}  # e.g. { 'Burn' : 2, 'Bleed': 1 }
         self.active_effects = {} # e.g. { 'gained_combo_points': True, 'combo_points': 0 }
         self.fixed_representation = fixed_representation
+        self.map = None  # Will be set when added to a map
 
     @classmethod
     def from_hero_archetype(cls, hero_archetype):

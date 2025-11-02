@@ -20,7 +20,7 @@ def sael_avalanche_crush(map, sael):
         lambda figure, damage_taken, damage_type, damage_source: sael_avalanche_knockback_listener(figure, damage_taken, damage_type, damage_source, map)
     )
     
-    for i in range(3):
+    for _ in range(3):
         basic_action(map, sael)
     
     map.events.deregister("damage_taken", listener_id)
@@ -40,7 +40,7 @@ def storm_shield_pulse(map, sael):
 
 def storm_shield_listener(map, sael, listener):
     if sael.get_condition("Shielded"):
-        storm_shield_pulse(map)
+        storm_shield_pulse(map, sael)
     else:
         map.events.deregister("boss_turn_start", listener)
 
@@ -103,14 +103,14 @@ def sael_frost_tomb(map, sael):
 
 def sael_whirlwind(map, sael):
     target_hero = choose_target_hero(map, sael)
-    make_enemy_move(map, sael, target_hero, sael.move)
+    make_enemy_move(map, sael, target_hero)
     for hero in map.get_figures_by_type(FigureType.HERO):
         if map.distance_between(sael.position, hero.position) <= 2:
             map.deal_damage(sael, hero, physical_damage=sael.physical_dmg, elemental_damage=sael.elemental_dmg + 1)
 
 def sael_frost_breath(map, sael):
     target_hero = choose_target_hero(map, sael)
-    make_enemy_move(map, sael, target_hero, sael.move)
+    make_enemy_move(map, sael, target_hero)
 
     if map.distance_between(sael.position, target_hero.position) <= sael.attack_range:
         target_area = map.get_cone(sael.position, target_hero.position, sael.attack_range)

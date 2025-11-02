@@ -169,7 +169,7 @@ class Map:
                     return False
             return True
         else:
-            raise "unexpected call to can_move_diagonal with non-diagonal coordinates"
+            raise Exception("unexpected call to can_move_diagonal with non-diagonal coordinates")
 
     def bfs(self, start, impassible_types=None, max_distance=None, target=None, return_paths=False):
         if impassible_types is None:
@@ -215,7 +215,7 @@ class Map:
     def squares_within_cone(self, origin, target, distance, impassible_types=None, angle_threshold = math.sqrt(2) / 2):
         dx = target.x - origin.x
         dy = target.y - origin.y
-        hypot = math.sqrt(v_x**2 + v_y**2)
+        hypot = math.sqrt(dx**2 + dy**2)
         dx, dy = (dx / hypot, dy / hypot)  # Normalize the direction vector
 
         in_range = self.squares_within_distance(origin, impassible_types, distance)
@@ -240,7 +240,7 @@ class Map:
         dx = figure.position.x - knockback_origin.x
         dy = figure.position.y - knockback_origin.y
         if dx == 0 and dy == 0:
-            raise("Cannot knock back figure from its own position")
+            raise(Exception("Cannot knock back figure from its own position"))
 
         remaining_distance = knockback_distance
         diagonal_move_expensive = False

@@ -34,7 +34,7 @@ def basic_action(map, figure):
         return 0 # no targetable heroes, so do nothing
     print(f"Enemy AI: {figure.name} is targeting {target_hero.name} at position {target_hero.position}.")
 
-    make_enemy_move(figure, target_hero, map, figure.move, figure.impassible_types)
+    make_enemy_move(figure, target_hero, map)
     
     if map.distance_between(figure.position, target_hero.position) <= figure.attack_range:
         dmg_dealt = map.deal_damage(figure, target_hero, figure.physical_dmg, figure.elemental_dmg)
@@ -42,7 +42,11 @@ def basic_action(map, figure):
 
     return 0
 
-def make_enemy_move(enemy, player, game_map, move_range, impassible_types):
+def make_enemy_move(enemy, player, game_map, move_range=None, impassible_types=None):
+    if move_range is None:
+        move_range = enemy.move
+    if impassible_types is None:
+        impassible_types = enemy.impassible_types
     # Get all orthogonally adjacent squares to the player
     preferred_targets = game_map.get_horver_neighbors(player.position)
     other_targets = game_map.get_diag_neighbors(player.position)

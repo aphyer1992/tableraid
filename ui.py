@@ -157,25 +157,23 @@ class GameUI:
         right_effects = []
         left_effects = []
         base_text = figure.get_representation_text()
+        
         for effect, details in EFFECTS_DISPLAY.items():
+            # Get quantity from the appropriate source
             if details['is_condition']:
-                if effect in figure.conditions:
-                    include = True
-                    quantity = figure.conditions[effect]
-                else:
-                    include = False
+                quantity = figure.conditions.get(effect, 0)
             else:
-                if effect in figure.active_effects:
-                    include = True
-                    quantity = figure.active_effects[effect]
-                else:
-                    include = False
-
-            if include and quantity > 0:
+                quantity = figure.active_effects.get(effect, 0)
+            
+            # Only add if quantity > 0
+            if quantity > 0:
+                effect_text = f"{details['icon']} {quantity}"
+                effect_data = {"text": effect_text, "color": details['color']}
+                
                 if details['position'] == 'right':
-                    right_effects.append({"text": f"{details['icon']} {quantity}", "color": details['color']})
+                    right_effects.append(effect_data)
                 elif details['position'] == 'left':
-                    left_effects.append({"text": f"{details['icon']} {quantity}", "color": details['color']})
+                    left_effects.append(effect_data)
 
         return {
             "center": base_text,
