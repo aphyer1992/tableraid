@@ -1,5 +1,5 @@
 from coords import Coords
-from figure import Figure, FigureType
+from figure import FigureType
 from events import EventManager
 from conditions import setup_condition_listeners
 import math
@@ -155,22 +155,22 @@ class Map:
     def can_move_diagonal(self, from_coords, to_coords, impassible_types):
         dx = to_coords.x - from_coords.x
         dy = to_coords.y - from_coords.y
-        # Only for diagonal moves
-        if abs(dx) == 1 and abs(dy) == 1:
-            adj1 = Coords(from_coords.x + dx, from_coords.y)
-            adj2 = Coords(from_coords.x, from_coords.y + dy)
-            for adj in [adj1, adj2]:
-                if not self.coords_in_bounds(adj):
-                    return False
-                if any(
-                    figure.figure_type in impassible_types
-                    for figure in self.cell_contents[adj.y][adj.x]
-                ):
-                    return False
-            return True
-        else:
-            raise Exception("unexpected call to can_move_diagonal with non-diagonal coordinates")
-
+        
+        assert abs(dx) == 1 and abs(dy) == 1, \
+            f"can_move_diagonal called with non-diagonal coordinates: from {from_coords} to {to_coords}"
+        
+        adj1 = Coords(to_coords.x, from_coords.y)
+        adj2 = Coords(from_coords.x, to_coords.y)
+        for adj in [adj1, adj2]:
+            if not self.coords_in_bounds(adj):
+                return False
+            if any(
+                figure.figure_type in impassible_types
+                for figure in self.cell_contents[adj.y][adj.x]
+            ):
+                return False
+        return True
+        
     def bfs(self, start, impassible_types=None, max_distance=None, target=None, return_paths=False):
         if impassible_types is None:
             impassible_types = set()

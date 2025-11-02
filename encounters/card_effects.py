@@ -114,7 +114,9 @@ def sael_frost_breath(map, sael):
 
     if map.distance_between(sael.position, target_hero.position) <= sael.attack_range:
         target_area = map.get_cone(sael.position, target_hero.position, sael.attack_range)
-
+    else:
+        target_area = []
+        
     for hero in map.get_figures_by_type(FigureType.HERO):
         if hero.position in target_area:
             map.deal_damage(sael, hero, physical_damage=0, elemental_damage=3)

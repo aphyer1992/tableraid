@@ -308,8 +308,7 @@ class GameUI:
         self.draw_map()
 
     def execute_attack(self, attacking_figure, target_figure, physical_damage, elemental_damage, costs_attack_action=False, after_attack_callback=None):
-        if target_figure:
-            dmg_dealt = self.map.deal_damage(attacking_figure, target_figure, physical_damage, elemental_damage)
+        dmg_dealt = self.map.deal_damage(attacking_figure, target_figure, physical_damage, elemental_damage)    
         if costs_attack_action and attacking_figure.figure_type == FigureType.HERO:
             attacking_figure.hero.attack_available = False
         if after_attack_callback:
