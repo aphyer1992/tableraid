@@ -113,7 +113,7 @@ def sael_frost_breath(map, sael):
     make_enemy_move(map, enemy=sael, player=target_hero)
 
     if map.distance_between(sael.position, target_hero.position) <= sael.attack_range:
-        target_area = map.get_cone(sael.position, target_hero.position, sael.attack_range)
+        target_area = map.squares_within_cone(origin=sael.position, target=target_hero.position, distance=4)
     else:
         target_area = []
 

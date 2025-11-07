@@ -30,7 +30,7 @@ class Figure:
         self.conditions = {}  # e.g. { 'Burn' : 2, 'Bleed': 1 }
         self.active_effects = {} # e.g. { 'gained_combo_points': True, 'combo_points': 0 }
         self.fixed_representation = fixed_representation
-        self.cell_colo
+        self.cell_color = cell_color
         self.map = None  # Will be set when added to a map
 
     @classmethod
