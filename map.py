@@ -92,10 +92,10 @@ class Map:
         if figure not in self.figures:
             raise ValueError("Figure not found on the map")
         coords = self.positions[figure]
-        self.cell_contents[coords[1]][coords[0]].remove(figure)
+        self.cell_contents[coords.y][coords.x].remove(figure)
         del self.positions[figure]
         self.figures.remove(figure)
-        self.events.trigger("figure_removed", figure=figure, coords=Coords(coords[0], coords[1]))
+        self.events.trigger("figure_removed", figure=figure, coords=Coords(x=coords.x, y=coords.y))
 
     def move_figure(self, figure, coords):
         if figure not in self.figures:

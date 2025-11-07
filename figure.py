@@ -9,7 +9,7 @@ class FigureType(Enum):
 
 
 class Figure:
-    def __init__(self, name, figure_type, health=None, physical_def=0, elemental_def=0, move=0, physical_dmg=0, elemental_dmg=0, attack_range=1, fixed_representation=None):
+    def __init__(self, name, figure_type, health=None, physical_def=0, elemental_def=0, move=0, physical_dmg=0, elemental_dmg=0, attack_range=1, fixed_representation=None, cell_color=None):
         self.name = name
         self.figure_type = figure_type
         self.max_health = health if health is not None else 1
@@ -30,6 +30,7 @@ class Figure:
         self.conditions = {}  # e.g. { 'Burn' : 2, 'Bleed': 1 }
         self.active_effects = {} # e.g. { 'gained_combo_points': True, 'combo_points': 0 }
         self.fixed_representation = fixed_representation
+        self.cell_color = cell_color
         self.map = None  # Will be set when added to a map
 
     @classmethod

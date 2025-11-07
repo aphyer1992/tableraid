@@ -34,7 +34,7 @@ def basic_action(map, figure):
         return 0 # no targetable heroes, so do nothing
     print(f"Enemy AI: {figure.name} is targeting {target_hero.name} at position {target_hero.position}.")
 
-    make_enemy_move(map, figure, target_hero)
+    make_enemy_move(map, enemy=figure, player=target_hero)
     
     if map.distance_between(figure.position, target_hero.position) <= figure.attack_range:
         dmg_dealt = map.deal_damage(figure, target_hero, figure.physical_dmg, figure.elemental_dmg)
@@ -65,10 +65,14 @@ def make_enemy_move(game_map, enemy, player, move_range=None, impassible_types=N
             min_dist = dist
             best_square = square
     
+    print(f"Enemy AI: {enemy.name} at {enemy.position} moving towards {best_square} near player at {player.position}.")
+
     path_costs, path_came_from = game_map.bfs(enemy.position, impassible_types, target=best_square, return_paths=True)
-    while path_costs[best_square] >= move_range:
+    while path_costs[best_square] > move_range:
         best_square = path_came_from[best_square]
     
+    print(f"Enemy AI: {enemy.name} will move to {best_square}.")
+
     path_to_walk = []
     while best_square != enemy.position:
         path_to_walk.append(best_square)

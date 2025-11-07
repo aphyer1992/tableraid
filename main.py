@@ -6,7 +6,7 @@ from encounters.encounter_sael import EncounterSael
 import random
 
 def main():
-    random.seed(420)  # For reproducibility in random actions
+    #random.seed(421)  # For reproducibility in random actions
     map = Map(EncounterSael())
     heroes = [Hero(archetype) for archetype in hero_archetypes]
 

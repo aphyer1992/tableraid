@@ -28,15 +28,15 @@ def sael_avalanche_crush(map, sael):
 def sael_frozen_servants(map, sael):
     basic_action(map, sael)
 
-    map.add_figure(Figure("Frost Elemental", FigureType.MINION, health=5, physical_def=5, elemental_def=4), Coords(0,2)) 
-    map.add_figure(Figure("Frost Elemental", FigureType.MINION, health=5, physical_def=5, elemental_def=4), Coords(10,2)) 
+    map.add_figure(Figure("Frost Elemental", FigureType.MINION, health=5, physical_def=5, elemental_def=4, move=1), Coords(0,2)) 
+    map.add_figure(Figure("Frost Elemental", FigureType.MINION, health=5, physical_def=5, elemental_def=4, move=1), Coords(10,2)) 
     
 
 
 def storm_shield_pulse(map, sael):
     heroes = map.get_figures_by_type(FigureType.HERO)
     for hero in heroes:
-        map.deal_damage(sael, hero, physical_damage=0, elemental_damage=1, reduce_hp=True)
+        map.deal_damage(sael, hero, physical_damage=0, elemental_damage=1)
 
 def storm_shield_listener(map, sael, listener):
     if sael.get_condition("Shielded"):
@@ -103,20 +103,20 @@ def sael_frost_tomb(map, sael):
 
 def sael_whirlwind(map, sael):
     target_hero = choose_target_hero(map, sael)
-    make_enemy_move(map, sael, target_hero)
+    make_enemy_move(map, enemy=sael, player=target_hero)
     for hero in map.get_figures_by_type(FigureType.HERO):
         if map.distance_between(sael.position, hero.position) <= 2:
             map.deal_damage(sael, hero, physical_damage=sael.physical_dmg, elemental_damage=sael.elemental_dmg + 1)
 
 def sael_frost_breath(map, sael):
     target_hero = choose_target_hero(map, sael)
-    make_enemy_move(map, sael, target_hero)
+    make_enemy_move(map, enemy=sael, player=target_hero)
 
     if map.distance_between(sael.position, target_hero.position) <= sael.attack_range:
         target_area = map.get_cone(sael.position, target_hero.position, sael.attack_range)
     else:
         target_area = []
-        
+
     for hero in map.get_figures_by_type(FigureType.HERO):
         if hero.position in target_area:
             map.deal_damage(sael, hero, physical_damage=0, elemental_damage=3)
@@ -133,15 +133,19 @@ def sael_ice_collapse_listener(map):
                 map.deal_damage(marker, hero, physical_damage=1, elemental_damage=1)
 
     for marker in markers:
+        fallen_ice = Figure("Fallen Ice", FigureType.OBSTACLE)
+        fallen_ice.cell_color = "#B8860B"  # Dark yellow
+        map.add_figure(fallen_ice, marker.position, on_occupied='displace', fixed_representation="ICEFALL")
         map.remove_figure(marker)
-        map.add_figure(Figure("Fallen Ice", FigureType.OBSTACLE), marker.position, on_occupied='displace')
     map.events.deregister("boss_turn_start", sael_ice_collapse_listener)
 
 def sael_ice_collapse(map, sael):
     basic_action(map, sael)
     target_heroes = random.sample(map.get_figures_by_type(FigureType.HERO), 2)
     for hero in target_heroes:
-        map.add_figure(Figure("Incoming Ice", FigureType.MARKER), hero.position)
+        incoming_ice = Figure("Incoming Ice", FigureType.MARKER)
+        incoming_ice.cell_color = "#FFB6C1"  # Light red
+        map.add_figure(incoming_ice, hero.position, on_occupied='colocate')
     map.events.register("boss_turn_start", lambda: sael_ice_collapse_listener(map))
 
 # When Biting Cold is applied:
@@ -156,6 +160,6 @@ def sael_eye_of_the_storm(map, sael):
     heroes.sort(key=lambda h: map.get_distance(sael.position, h.position), reverse=True)  # from furthest to closest
     for hero in heroes:
         # doesn't actually deal damage, just knocks back.
-        dmg_dealt = map.deal_damage(sael, hero, physical_damage=0, elemental_damage=3, reduce_hp=False)
+        dmg_dealt = map.deal_damage(sael, hero, physical_damage=0, elemental_damage=3, reduce_health=False)
         if dmg_dealt > 0:
             map.knock_back(hero, dmg_dealt)

@@ -152,7 +152,13 @@ class GameUI:
 
     def get_figure_representation(self, cell_contents):
         if not cell_contents:
-            return " "
+            return {
+                "center": " ",
+                "right_effects": [],
+                "left_effects": [],
+                "background_color": None
+            }
+        
         if len(cell_contents) > 1:
             front_figures = [f for f in cell_contents if f.figure_type != FigureType.MARKER]
             if front_figures:
@@ -166,6 +172,11 @@ class GameUI:
         right_effects = []
         left_effects = []
         base_text = figure.get_representation_text()
+        
+        # Check for figure-specific background color
+        background_color = None
+        if hasattr(figure, 'cell_color') and figure.cell_color:
+            background_color = figure.cell_color
         
         for effect, details in EFFECTS_DISPLAY.items():
             # Get quantity from the appropriate source
@@ -188,6 +199,7 @@ class GameUI:
             "center": base_text,
             "right_effects": right_effects,
             "left_effects": left_effects,
+            "background_color": background_color
         }
 
     def draw_map(self):
@@ -205,20 +217,30 @@ class GameUI:
                 if cell:
                     rep = self.get_figure_representation(cell)
                 else:
-                    rep = {"center": " ", "right_effects": [], "left_effects": []}
+                    rep = {"center": " ", "right_effects": [], "left_effects": [], "background_color": None}
 
+                # Determine background color priority:
+                # 1. Selection mode color (highest priority)
+                # 2. Special tile color (encounter paths)
+                # 3. Figure-specific color
+                # 4. Default white
+                
                 if hasattr(self, 'select_mode') and self.select_mode and Coords(x, y) in self.valid_choices:    
                     bg_color = self.select_color
                     cmd = lambda _e, x=x, y=y: self.select_cmd(Coords(x, y))
                 else:
+                    # Check for special tiles first
                     bg_color = "white"
+                    for path in self.map.encounter.special_tiles.values():
+                        if Coords(x, y) in path["coords"]:
+                            bg_color = path["color"]
+                            break
+                    
+                    # If no special tile, check for figure color
+                    if bg_color == "white" and rep["background_color"]:
+                        bg_color = rep["background_color"]
+                    
                     cmd = None
-                
-                # Check if this cell is in any special path
-                for path in self.map.encounter.special_tiles.values():
-                    if Coords(x, y) in path["coords"]:
-                        bg_color = path["color"]
-                        break
 
                 cell_frame = tk.Frame(self.map_panel, width=65, height=65, bg=bg_color, borderwidth=1, relief="solid")
                 cell_frame.grid_propagate(False)  # Prevent resizing to fit contents
