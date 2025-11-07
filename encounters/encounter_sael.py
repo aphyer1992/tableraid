@@ -154,7 +154,7 @@ class EncounterSael(EncounterBase):
         
         for hero in self.map.get_figures_by_type(FigureType.HERO):
             if self.map.distance_between(blizzard.position, hero.position) <= 2:
-                self.map.deal_damage(blizzard, hero, 1, 'Elemental')
+                self.map.deal_damage(blizzard, hero, physical_damage=0, elemental_damage=1)
 
     def activate_elementals(self):
         elementals = self.map.get_figures_by_name("Frost Elemental")
