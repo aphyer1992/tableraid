@@ -9,15 +9,15 @@ def sael_biting_cold_listener(figure, roll, damage_type, map):
         figure.current_health -= 1
         figure.add_condition("Slowed", 1)
 
-def sael_avalanche_knockback_listener(figure, damage_taken, damage_type, damage_source, map):
-    if damage_type == 'Physical' and figure.figure_type == FigureType.HERO and damage_source.figure_type == FigureType.BOSS:
-        map.knock_back(figure, damage_source.position, damage_taken)
+def sael_avalanche_knockback_listener(figure, damage_taken, damage_source, map):
+    if figure.figure_type == FigureType.HERO and damage_source.figure_type == FigureType.BOSS:
+        map.knock_back(figure, damage_source.position, damage_taken['physical_damage_taken'])
 
 
 def sael_avalanche_crush(map, sael):
     listener_id = map.events.register(
         "damage_taken", 
-        lambda figure, damage_taken, damage_type, damage_source: sael_avalanche_knockback_listener(figure, damage_taken, damage_type, damage_source, map)
+        lambda figure, damage_taken, damage_source, **kwargs: sael_avalanche_knockback_listener(figure, damage_taken, damage_source, map)
     )
     
     for _ in range(3):

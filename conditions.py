@@ -32,9 +32,11 @@ def slow_listener(figure, move_data):
 def shield_listener(figure, damage_taken, **kwargs):
     if "Shielded" in figure.conditions:
         shield_amount = figure.conditions["Shielded"]
-        amount_blocked = min(shield_amount, damage_taken["damage_taken"])
-        damage_taken["damage_taken"] -= amount_blocked
-        figure.conditions["Shielded"] -= amount_blocked
+        physical_blocked = min(shield_amount, damage_taken["physical_damage_taken"])
+        elemental_blocked = min(shield_amount - physical_blocked, damage_taken["elemental_damage_taken"])
+        damage_taken["physical_damage_taken"] -= physical_blocked
+        damage_taken["elemental_damage_taken"] -= elemental_blocked
+        figure.conditions["Shielded"] -= (physical_blocked + elemental_blocked)
         if figure.conditions["Shielded"] <= 0:
             del figure.conditions["Shielded"]
 
