@@ -1,5 +1,5 @@
-from .encounter_base import EncounterBase
-from .card_effects import (
+from encounters.encounter_base import EncounterBase
+from encounters.card_effects import (
     sael_avalanche_crush,
     sael_storm_shield,
     sael_chilling_winds,
@@ -15,7 +15,7 @@ from .card_effects import (
 from figure import Figure, FigureType
 import random
 from coords import Coords
-from .enemy_ai import basic_action
+from encounters.enemy_ai import basic_action
 
 sael_cards = [
     {   

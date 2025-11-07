@@ -1,6 +1,6 @@
 from figure import Figure, FigureType
 from coords import Coords
-from .enemy_ai import basic_action, choose_target_hero, make_enemy_move
+from encounters.enemy_ai import basic_action, choose_target_hero, make_enemy_move
 import random
 
 def sael_biting_cold_listener(figure, roll, damage_type, map):

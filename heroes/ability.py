@@ -1,4 +1,4 @@
-from .ability_effects import (
+from heroes.ability_effects import (
     warrior_taunt,
     warrior_bastion,
     warrior_shield_bash,
