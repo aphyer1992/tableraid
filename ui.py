@@ -39,7 +39,7 @@ class GameUI:
         self.select_cmd = lambda coords: self.place_hero(coords.x, coords.y)
 
     def update_placement_label(self):
-        if hasattr(self, "placement_label"):
+        if hasattr(self, "placement_label") and self.placement_label:
             self.placement_label.destroy()
         if self.placement_queue:
             hero = self.placement_queue[0]
@@ -120,7 +120,14 @@ class GameUI:
 
                 if ability.variable_cost:
                     energy_var = tk.IntVar(value=1)
-                    spin = tk.Spinbox(frame_ability, from_=1, to=hero.current_energy, width=3, textvariable=energy_var)
+                    
+                    if hero.current_energy > 0:
+                        spin = tk.Spinbox(frame_ability, from_=1, to=hero.current_energy, width=3, textvariable=energy_var)
+                    else:
+                        # When no energy, create a disabled spinbox with 0 value
+                        energy_var.set(0)
+                        spin = tk.Spinbox(frame_ability, from_=0, to=0, width=3, textvariable=energy_var, state=tk.DISABLED)
+                    
                     btn = tk.Button(
                         frame_ability,
                         text=ability.name,
