@@ -43,5 +43,5 @@ def shield_listener(figure, damage_taken, **kwargs):
 def setup_condition_listeners(map):
     map.events.register("start_figure_action", condition_turn_start_listener)
     map.events.register("end_figure_action", condition_turn_end_listener)
-    map.events.register("move", slow_listener)
+    map.events.register("get_move", slow_listener)
     map.events.register("damage_taken", shield_listener)
