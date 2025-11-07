@@ -160,7 +160,7 @@ class GameUI:
             }
         
         if len(cell_contents) > 1:
-            front_figures = [f for f in cell_contents if f.figure_type != FigureType.MARKER]
+            front_figures = [f for f in cell_contents if f.figure_type != FigureType.MARKER and f.targetable]
             if front_figures:
                 assert(len(front_figures) == 1), "There should be only one front figure in a cell"
                 figure = front_figures[0]

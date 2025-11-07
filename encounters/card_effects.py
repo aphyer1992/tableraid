@@ -81,7 +81,7 @@ def sael_chilling_winds(map, sael):
 def sael_frost_tomb(map, sael):
     basic_action(map, sael)
     target_hero = random.choice(map.get_figures_by_type(FigureType.HERO))
-    tomb = Figure("Frost Tomb", FigureType.MARKER, health=5, physical_def=5, elemental_def=4, move=0)
+    tomb = Figure("Frost Tomb", FigureType.MINION, health=5, physical_def=5, elemental_def=4, move=0)
     map.add_figure(tomb, target_hero.position, on_occupied='colocate')
     target_hero.targetable = False
     target_hero.add_condition("Stunned", 99)
