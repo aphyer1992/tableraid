@@ -144,8 +144,8 @@ class Figure:
     def get_condition(self, condition, default_value=None):
         return self.conditions.get(condition, default_value)
     
-    def start_action(self):
-        self.map.events.trigger(GameEvent.START_ACTION, figure=self)
+    def start_figure_action(self):
+        self.map.events.trigger(GameEvent.START_FIGURE_ACTION, figure=self)
         
     def end_figure_action(self):
         self.map.events.trigger(GameEvent.END_FIGURE_ACTION, figure=self)

@@ -309,11 +309,11 @@ class Map:
 
     def execute_boss_turn(self):
         self.events.trigger(GameEvent.BOSS_TURN_START)
-        for boss in self.get_figures_by_type([FigureType.BOSS, FigureType.MINION]):
-            self.events.trigger(GameEvent.START_ACTION, figure=boss)
+        for figure in self.get_figures_by_type([FigureType.BOSS, FigureType.MINION]):
+            self.events.trigger(GameEvent.START_FIGURE_ACTION, figure=figure)
 
         self.encounter.perform_boss_turn()
 
-        for boss in self.get_figures_by_type([FigureType.BOSS, FigureType.MINION]):
-            self.events.trigger(GameEvent.END_FIGURE_ACTION, figure=boss)
+        for figure in self.get_figures_by_type([FigureType.BOSS, FigureType.MINION]):
+            self.events.trigger(GameEvent.END_FIGURE_ACTION, figure=figure)
         self.events.trigger(GameEvent.BOSS_TURN_END)

@@ -28,10 +28,6 @@ class GameEvent(Enum):
     """Triggered when a figure (hero/boss/minion) ends their individual action.
     Args: figure - the Figure object ending their action"""
     
-    START_ACTION = "start_action"
-    """Triggered when any action begins (more general than start_figure_action).
-    Args: figure - the Figure object starting an action"""
-    
     # Combat events
     DAMAGE_TAKEN = "damage_taken"
     """Triggered when a figure takes damage (after defense rolls).
