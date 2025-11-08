@@ -1,7 +1,7 @@
 from game_events import GameEvent
 
-tick_down_at_start = ['"Regen"', '"Shielded"']  # conditions that tick down at start of turn
-tick_down_at_end = ['"Burn"', '"Bleed"']  # conditions that tick down at end of turn
+tick_down_at_start = ["Regen", "Shielded"]  # conditions that tick down at start of turn
+tick_down_at_end = ["Burn", "Bleed", "Stunned"]  # conditions that tick down at end of turn
 
 def condition_turn_end_listener(figure):
     for condition, duration in figure.conditions.items():

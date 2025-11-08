@@ -120,8 +120,9 @@ def rogue_vanish(figure, energy_spent, ui=None):
             if can_move_here:
                 valid_vanish_destinations.append(destination)
         
-        # Use custom movement with restricted destinations
-        ui.hero_move(figure.hero, move_distance=2, costs_move_action=False, valid_destinations=valid_vanish_destinations)
+        if len(valid_vanish_destinations) > 0:
+            valid_vanish_destinations.append(figure.position)  # Allow no-move option
+            ui.hero_move(figure.hero, move_distance=2, costs_move_action=False, valid_destinations=valid_vanish_destinations)
 
 def ranger_power_shot(figure, energy_spent, ui=None):
     ui.hero_attack(figure.hero, physical_damage=5, elemental_damage=0, range=5, costs_attack_action=True)
