@@ -1,6 +1,7 @@
 from coords import Coords
 from figure import FigureType
 from events import EventManager
+from game_events import GameEvent
 from conditions import setup_condition_listeners
 import math
 import random
@@ -86,7 +87,7 @@ class Map:
                 if ability.setup_routine is not None:
                     ability.setup_routine(figure.hero)
 
-        self.events.trigger("figure_added", figure=figure, coords=coords)
+        self.events.trigger(GameEvent.FIGURE_ADDED, figure=figure, coords=coords)
         
     def remove_figure(self, figure):
         if figure not in self.figures:
@@ -95,7 +96,7 @@ class Map:
         self.cell_contents[coords.y][coords.x].remove(figure)
         del self.positions[figure]
         self.figures.remove(figure)
-        self.events.trigger("figure_removed", figure=figure, coords=Coords(x=coords.x, y=coords.y))
+        self.events.trigger(GameEvent.FIGURE_REMOVED, figure=figure, coords=Coords(x=coords.x, y=coords.y))
 
     def move_figure(self, figure, coords):
         if figure not in self.figures:
@@ -161,16 +162,14 @@ class Map:
         
         adj1 = Coords(to_coords.x, from_coords.y)
         adj2 = Coords(from_coords.x, to_coords.y)
-        for adj in [adj1, adj2]:
-            if not self.coords_in_bounds(adj):
-                return False
-            if any(
-                figure.figure_type in impassible_types
-                for figure in self.cell_contents[adj.y][adj.x]
-            ):
-                return False
-        return True
         
+        # Check if at least one adjacent square is passable
+        if not any(figure.figure_type in impassible_types for figure in self.cell_contents[adj1.y][adj1.x]):
+            return True
+        if not any(figure.figure_type in impassible_types for figure in self.cell_contents[adj2.y][adj2.x]):
+            return True
+        return False
+
     def bfs(self, start, impassible_types=None, max_distance=None, target=None, return_paths=False):
         if impassible_types is None:
             impassible_types = set()
@@ -297,24 +296,24 @@ class Map:
         return damage_taken
 
     def begin_hero_turn(self):
-        self.events.trigger("hero_turn_start")
+        self.events.trigger(GameEvent.HERO_TURN_START)
         self.heroes_activated = 0
         for hero_figure in self.get_figures_by_type(FigureType.HERO):
             hero_figure.hero.reset_turn()
-            self.events.trigger("start_figure_action", figure=hero_figure)
+            self.events.trigger(GameEvent.START_FIGURE_ACTION, figure=hero_figure)
     
     def end_hero_turn(self):
         for hero_figure in self.get_figures_by_type(FigureType.HERO):
-            self.events.trigger("end_figure_action", figure=hero_figure)
-        self.events.trigger("hero_turn_end")
+            self.events.trigger(GameEvent.END_FIGURE_ACTION, figure=hero_figure)
+        self.events.trigger(GameEvent.HERO_TURN_END)
 
     def execute_boss_turn(self):
-        self.events.trigger("boss_turn_start")
+        self.events.trigger(GameEvent.BOSS_TURN_START)
         for boss in self.get_figures_by_type([FigureType.BOSS, FigureType.MINION]):
-            self.events.trigger("start_action", figure=boss)
+            self.events.trigger(GameEvent.START_ACTION, figure=boss)
 
         self.encounter.perform_boss_turn()
 
         for boss in self.get_figures_by_type([FigureType.BOSS, FigureType.MINION]):
-            self.events.trigger("end_figure_action", figure=boss)
-        self.events.trigger("boss_turn_end")
+            self.events.trigger(GameEvent.END_FIGURE_ACTION, figure=boss)
+        self.events.trigger(GameEvent.BOSS_TURN_END)

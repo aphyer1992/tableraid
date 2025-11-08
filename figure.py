@@ -1,5 +1,6 @@
 import random
 from enum import Enum
+from game_events import GameEvent
 class FigureType(Enum):
     BOSS = 'boss'
     HERO = 'hero'
@@ -55,7 +56,7 @@ class Figure:
     @property
     def move(self):
         move_data = {"value": self.base_move}
-        self.map.events.trigger("get_move", figure=self, move_data=move_data)
+        self.map.events.trigger(GameEvent.GET_MOVE, figure=self, move_data=move_data)
         return move_data["value"]
 
     def get_representation_text(self):
@@ -80,7 +81,7 @@ class Figure:
         
         roll = random.randint(1, 6)
 
-        self.map.events.trigger("defense_roll", figure=self, roll=roll, damage_type=damage_type, damage_source=damage_source)
+        self.map.events.trigger(GameEvent.DEFENSE_ROLL, figure=self, roll=roll, damage_type=damage_type, damage_source=damage_source)
         print('Defense roll for {} against {} damage: {}'.format(self.name, damage_type, roll))
         if roll >= effective_def: # successful defense
             return True
@@ -94,7 +95,7 @@ class Figure:
             'physical_damage_taken' : sum(1 for roll in physical_rolls if not roll),
             'elemental_damage_taken' : sum(1 for roll in elemental_rolls if not roll)
         } # defined this way so listeners can edit.
-        self.map.events.trigger("damage_taken", figure=self, damage_taken=damage_taken, damage_source=damage_source)
+        self.map.events.trigger(GameEvent.DAMAGE_TAKEN, figure=self, damage_taken=damage_taken, damage_source=damage_source)
         if reduce_health:
             self.lose_health(damage_taken['physical_damage_taken'] + damage_taken['elemental_damage_taken'], source=damage_source)
 
@@ -111,7 +112,7 @@ class Figure:
         if amount < 0:
             raise ValueError("Healing amount must be positive")
         self.current_health = min(self.max_health, self.current_health + amount)
-        self.map.events.trigger("healed", figure=self, amount=amount, source=source)
+        self.map.events.trigger(GameEvent.HEALED, figure=self, amount=amount, source=source)
 
     def add_effect(self, effect_key, effect_value, overwrite=False):
         if effect_key in self.active_effects and not overwrite:
@@ -133,18 +134,18 @@ class Figure:
                 self.conditions[condition] = max(duration, self.conditions[condition])
         else:
             self.conditions[condition] = duration
-        self.map.events.trigger("condition_added", figure=self, condition=condition, duration=duration)
+        self.map.events.trigger(GameEvent.CONDITION_ADDED, figure=self, condition=condition, duration=duration)
 
     def remove_condition(self, condition):
         if condition in self.conditions:
             del self.conditions[condition]
-            self.map.events.trigger("condition_removed", figure=self, condition=condition)
+            self.map.events.trigger(GameEvent.CONDITION_REMOVED, figure=self, condition=condition)
 
     def get_condition(self, condition, default_value=None):
         return self.conditions.get(condition, default_value)
     
     def start_action(self):
-        self.map.events.trigger("start_action", figure=self)
+        self.map.events.trigger(GameEvent.START_ACTION, figure=self)
         
     def end_figure_action(self):
-        self.map.events.trigger("end_figure_action", figure=self)
+        self.map.events.trigger(GameEvent.END_FIGURE_ACTION, figure=self)

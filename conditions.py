@@ -1,3 +1,5 @@
+from game_events import GameEvent
+
 tick_down_at_start = ['"Regen"', '"Shielded"']  # conditions that tick down at start of turn
 tick_down_at_end = ['"Burn"', '"Bleed"']  # conditions that tick down at end of turn
 
@@ -43,7 +45,7 @@ def shield_listener(figure, damage_taken, **kwargs):
             del figure.conditions["Shielded"]
 
 def setup_condition_listeners(map):
-    map.events.register("start_figure_action", condition_turn_start_listener)
-    map.events.register("end_figure_action", condition_turn_end_listener)
-    map.events.register("get_move", slow_listener)
-    map.events.register("damage_taken", shield_listener)
+    map.events.register(GameEvent.START_FIGURE_ACTION, condition_turn_start_listener)
+    map.events.register(GameEvent.END_FIGURE_ACTION, condition_turn_end_listener)
+    map.events.register(GameEvent.GET_MOVE, slow_listener)
+    map.events.register(GameEvent.DAMAGE_TAKEN, shield_listener)

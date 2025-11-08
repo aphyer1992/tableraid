@@ -1,6 +1,7 @@
 from figure import Figure, FigureType
 from coords import Coords
 from encounters.enemy_ai import basic_action, choose_target_hero, make_enemy_move
+from game_events import GameEvent
 import random
 
 def sael_biting_cold_listener(figure, roll, damage_type, map):
@@ -16,14 +17,14 @@ def sael_avalanche_knockback_listener(figure, damage_taken, damage_source, map):
 
 def sael_avalanche_crush(map, sael):
     listener_id = map.events.register(
-        "damage_taken", 
+        GameEvent.DAMAGE_TAKEN, 
         lambda figure, damage_taken, damage_source, **kwargs: sael_avalanche_knockback_listener(figure, damage_taken, damage_source, map)
     )
     
     for _ in range(3):
         basic_action(map, sael)
     
-    map.events.deregister("damage_taken", listener_id)
+    map.events.deregister(GameEvent.DAMAGE_TAKEN, listener_id)
 
 def sael_frozen_servants(map, sael):
     basic_action(map, sael)
@@ -48,9 +49,9 @@ def sael_storm_shield(map, sael):
         if sael.get_condition("Shielded"):
             storm_shield_pulse(map, sael)
         else:
-            map.events.deregister("boss_turn_start", listener_id)
+            map.events.deregister(GameEvent.BOSS_TURN_START, listener_id)
 
-    listener_id = map.events.register("boss_turn_start", shield_listener)
+    listener_id = map.events.register(GameEvent.BOSS_TURN_START, shield_listener)
     
 def sael_icicle_shards(map, sael):
     basic_action(map, sael)
@@ -90,9 +91,9 @@ def sael_frost_tomb(map, sael):
             map.events.deregister("figure_death", listener_id)
 
     # tomb regularly damages, you are freed when it dies
-    map.events.register("start_turn", lambda figure: tomb_damage_listener(figure))
-    map.events.register("end_turn", lambda figure: tomb_damage_listener(figure))
-    listener_id = map.events.register("figure_death", lambda figure: tomb_freedom_listener(figure))
+    map.events.register(GameEvent.HERO_TURN_START, lambda figure: tomb_damage_listener(figure))
+    map.events.register(GameEvent.BOSS_TURN_START, lambda figure: tomb_damage_listener(figure))
+    listener_id = map.events.register(GameEvent.FIGURE_DEATH, lambda figure: tomb_freedom_listener(figure))
 
 def sael_whirlwind(map, sael):
     target_hero = choose_target_hero(map, sael)
@@ -137,14 +138,12 @@ def sael_ice_collapse(map, sael):
         incoming_ice = Figure("Incoming Ice", FigureType.MARKER, cell_color="#FFB6C1")
         map.add_figure(incoming_ice, hero.position, on_occupied='colocate')
     
-    listener_id = map.events.register("boss_turn_start", lambda: sael_ice_collapse_listener(map))
-    
-    # Modify the listener to deregister itself after running
+    # Create a one-time listener that deregisters itself after running
     def one_time_collapse_listener():
         sael_ice_collapse_listener(map)
-        map.events.deregister("boss_turn_start", listener_id)
+        map.events.deregister(GameEvent.BOSS_TURN_START, listener_id)
     
-    listener_id = map.events.register("boss_turn_start", one_time_collapse_listener)
+    listener_id = map.events.register(GameEvent.BOSS_TURN_START, one_time_collapse_listener)
 
 # When Biting Cold is applied:
 
