@@ -10,6 +10,7 @@ def condition_turn_end_listener(figure):
         
         if condition in tick_down_at_end: # e.g. shield does not tick down at end of turn by default
             figure.conditions[condition] = duration - 1
+            print(f"DEBUG: Condition {condition} on {figure.name} ticks down to {figure.conditions[condition]}")
     
     # remove any that have timed out.
     figure.conditions = {k: v for k, v in figure.conditions.items() if v > 0}
@@ -21,7 +22,8 @@ def condition_turn_start_listener(figure):
         
         if condition in tick_down_at_start:
             figure.conditions[condition] = duration - 1
-    
+            print(f"DEBUG: Condition {condition} on {figure.name} ticks down to {figure.conditions[condition]}")
+
     # remove any that have timed out.
     figure.conditions = {k: v for k, v in figure.conditions.items() if v > 0}
 

@@ -289,7 +289,8 @@ class Map:
                 remaining_distance -= move_cost
 
         # If not moved full distance, take damage for each remaining step
-        figure.take_damage(physical_damage=remaining_distance, elemental_damage=0, damage_source="Knockback collision", reduce_health=True)
+        if remaining_distance > 0:
+            figure.take_damage(physical_damage=remaining_distance, elemental_damage=0, damage_source="Knockback collision")
 
     def deal_damage(self, source, target, physical_damage, elemental_damage, reduce_health=True):
         damage_taken = target.take_damage(physical_damage, elemental_damage, damage_source=source, reduce_health=reduce_health)

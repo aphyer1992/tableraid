@@ -168,7 +168,6 @@ class EncounterSael(EncounterBase):
         self.get_next_card()
 
     def perform_boss_turn(self):
-        self.map.events.trigger("boss_turn_start")
         self.activate_blizzard()
         self.activate_elementals()
         self.activate_boss()

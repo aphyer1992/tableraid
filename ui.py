@@ -175,8 +175,10 @@ class GameUI:
         
         # Check for figure-specific background color
         background_color = None
-        if hasattr(figure, 'cell_color') and figure.cell_color:
-            background_color = figure.cell_color
+        for any_figure in cell_contents:
+            if hasattr(any_figure, 'cell_color') and any_figure.cell_color:
+                background_color = any_figure.cell_color
+                break
         
         for effect, details in EFFECTS_DISPLAY.items():
             # Get quantity from the appropriate source
@@ -348,7 +350,7 @@ class GameUI:
         self.draw_map()
         self.draw_hero_panel()
 
-    def choose_friendly_target(self, coords, range, callback_fn):
+    def choose_friendly_target(self, coords, range, callback_fn, auto_cleanup=True):
         valid_targets = self.map.get_figures_within_distance(coords, range)
         valid_targets = [f for f in valid_targets if f.figure_type == FigureType.HERO]
         if not valid_targets:
@@ -361,9 +363,10 @@ class GameUI:
 
         def wrapped_callback(coords):
             callback_fn(targets_dict[coords])
-            self.select_mode = None
-            self.draw_map()
-            self.draw_hero_panel()
+            if auto_cleanup:
+                self.select_mode = None
+                self.draw_map()
+                self.draw_hero_panel()
 
         self.select_cmd = wrapped_callback
         self.draw_map()

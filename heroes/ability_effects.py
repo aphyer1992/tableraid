@@ -98,12 +98,12 @@ def rogue_vanish(figure, energy_spent, ui=None):
 def ranger_power_shot(figure, energy_spent, ui=None):
     ui.hero_attack(figure.hero, physical_damage=5, elemental_damage=0, range=5, costs_attack_action=True)
 
-def ranger_spirit_link_callback(figure, target, ui):
-    target.heal(1, source=figure)
-    ui.hero_move(target, move_distance=1, costs_move_action=False)
-
 def ranger_spirit_link(figure, energy_spent, ui=None):
-    ui.choose_friendly_target(figure.position, range=5, callback_fn=ranger_spirit_link_callback)
+    def spirit_link_callback(target):
+        target.heal(1, source=figure)
+        ui.hero_move(target.hero, move_distance=1, costs_move_action=False)
+    
+    ui.choose_friendly_target(figure.position, range=5, callback_fn=spirit_link_callback, auto_cleanup=False)
 
 def ranger_quick_step(figure, energy_spent, ui=None):
     assert ui

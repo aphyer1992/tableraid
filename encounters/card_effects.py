@@ -10,7 +10,7 @@ def sael_biting_cold_listener(figure, roll, damage_type, map):
         figure.add_condition("Slowed", 1)
 
 def sael_avalanche_knockback_listener(figure, damage_taken, damage_source, map):
-    if figure.figure_type == FigureType.HERO and damage_source.figure_type == FigureType.BOSS:
+    if figure.figure_type == FigureType.HERO and isinstance(damage_source, Figure) and damage_source.figure_type == FigureType.BOSS:
         map.knock_back(figure, damage_source.position, damage_taken['physical_damage_taken'])
 
 
@@ -31,18 +31,11 @@ def sael_frozen_servants(map, sael):
     map.add_figure(Figure("Frost Elemental", FigureType.MINION, health=5, physical_def=5, elemental_def=4, move=1), Coords(0,2)) 
     map.add_figure(Figure("Frost Elemental", FigureType.MINION, health=5, physical_def=5, elemental_def=4, move=1), Coords(10,2)) 
     
-
-
 def storm_shield_pulse(map, sael):
+    print('Storm Shield pulse from Sa\'el!')
     heroes = map.get_figures_by_type(FigureType.HERO)
     for hero in heroes:
         map.deal_damage(sael, hero, physical_damage=0, elemental_damage=1)
-
-def storm_shield_listener(map, sael, listener):
-    if sael.get_condition("Shielded"):
-        storm_shield_pulse(map, sael)
-    else:
-        map.events.deregister("boss_turn_start", listener)
 
 def sael_storm_shield(map, sael):
     basic_action(map, sael)
@@ -133,20 +126,25 @@ def sael_ice_collapse_listener(map):
                 map.deal_damage(marker, hero, physical_damage=1, elemental_damage=1)
 
     for marker in markers:
-        fallen_ice = Figure("Fallen Ice", FigureType.OBSTACLE)
-        fallen_ice.cell_color = "#B8860B"  # Dark yellow
-        map.add_figure(fallen_ice, marker.position, on_occupied='displace', fixed_representation="ICEFALL")
+        fallen_ice = Figure("ICEFALL", FigureType.OBSTACLE, cell_color="#B8860B")
+        map.add_figure(fallen_ice, marker.position, on_occupied='displace')
         map.remove_figure(marker)
-    map.events.deregister("boss_turn_start", sael_ice_collapse_listener)
 
 def sael_ice_collapse(map, sael):
     basic_action(map, sael)
     target_heroes = random.sample(map.get_figures_by_type(FigureType.HERO), 2)
     for hero in target_heroes:
-        incoming_ice = Figure("Incoming Ice", FigureType.MARKER)
-        incoming_ice.cell_color = "#FFB6C1"  # Light red
+        incoming_ice = Figure("Incoming Ice", FigureType.MARKER, cell_color="#FFB6C1")
         map.add_figure(incoming_ice, hero.position, on_occupied='colocate')
-    map.events.register("boss_turn_start", lambda: sael_ice_collapse_listener(map))
+    
+    listener_id = map.events.register("boss_turn_start", lambda: sael_ice_collapse_listener(map))
+    
+    # Modify the listener to deregister itself after running
+    def one_time_collapse_listener():
+        sael_ice_collapse_listener(map)
+        map.events.deregister("boss_turn_start", listener_id)
+    
+    listener_id = map.events.register("boss_turn_start", one_time_collapse_listener)
 
 # When Biting Cold is applied:
 
