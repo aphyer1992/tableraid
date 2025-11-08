@@ -86,14 +86,42 @@ def rogue_eviscerate(figure, energy_spent, ui=None):
 
 def rogue_vanish(figure, energy_spent, ui=None):
     figure.add_effect('taunt_level', -1)
-    def end_vanish_listener(figure_ending):
-        if figure_ending == figure:
-            figure.remove_effect('taunt_level')
-            figure.map.events.deregister("hero_turn_start", listener_id)
+    def end_vanish_listener():
+        figure.remove_effect('taunt_level')
+        figure.map.events.deregister("hero_turn_start", listener_id)
 
     listener_id = figure.map.events.register("hero_turn_start", end_vanish_listener)
 
-    ui.hero_move(figure.hero, move_distance=2, costs_move_action=False)
+    # Check if there's an adjacent enemy
+    adjacent_enemies = []
+    for neighbor in figure.map.get_horver_neighbors(figure.position) + figure.map.get_diag_neighbors(figure.position):
+        for fig in figure.map.get_square_contents(neighbor):
+            if fig.figure_type in [FigureType.BOSS, FigureType.MINION] and fig.targetable:
+                adjacent_enemies.append(fig)
+    
+    # Only allow vanish movement if there's an adjacent enemy
+    if adjacent_enemies:
+        # Calculate valid vanish destinations (must move away from enemies)
+        all_possible_moves = figure.hero.get_valid_move_destinations(2)
+        current_pos = figure.position
+        
+        valid_vanish_destinations = []
+        for destination in all_possible_moves:
+            # Check if this destination is farther from ALL adjacent enemies
+            can_move_here = True
+            for enemy in adjacent_enemies:
+                current_distance = figure.map.distance_between(current_pos, enemy.position)
+                new_distance = figure.map.distance_between(destination, enemy.position)
+                # Must move to equal or greater distance from each enemy
+                if new_distance < current_distance:
+                    can_move_here = False
+                    break
+            
+            if can_move_here:
+                valid_vanish_destinations.append(destination)
+        
+        # Use custom movement with restricted destinations
+        ui.hero_move(figure.hero, move_distance=2, costs_move_action=False, valid_destinations=valid_vanish_destinations)
 
 def ranger_power_shot(figure, energy_spent, ui=None):
     ui.hero_attack(figure.hero, physical_damage=5, elemental_damage=0, range=5, costs_attack_action=True)

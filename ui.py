@@ -302,17 +302,26 @@ class GameUI:
     def hero_basic_move_action(self, hero):
         self.hero_move(hero, costs_move_action=True)
 
-    def hero_move(self, hero, move_distance=None, costs_move_action=False):
+    def hero_move(self, hero, move_distance=None, costs_move_action=False, valid_destinations=None):
         if move_distance is None:
             move_distance = hero.archetype['move']
         self.select_mode = 'hero_move'
-        self.valid_choices = hero.get_valid_move_destinations(move_distance)
+        
+        # Use custom destinations if provided, otherwise calculate normal movement
+        if valid_destinations is not None:
+            self.valid_choices = valid_destinations
+        else:
+            self.valid_choices = hero.get_valid_move_destinations(move_distance)
+        
         self.select_color = "lightgreen"
         self.select_cmd = lambda coords: self.execute_move(hero, coords, costs_move_action)
         self.draw_map()
     
     def execute_move(self, hero, coords, costs_move_action=False):
-        self.map.move_figure(hero.figure, coords)
+        # Only move if the destination is different from current position
+        if coords != hero.figure.position:
+            self.map.move_figure(hero.figure, coords)
+        # Always consume the move action if it costs a move action (even for "no move")
         if costs_move_action:
             hero.move_available = False
         self.select_mode = None

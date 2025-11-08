@@ -30,7 +30,18 @@ class Hero:
 
     def get_valid_move_destinations(self, distance):
         squares = self.map.get_squares_within_distance(self.figure.position, distance, impassible_types=self.figure.impassible_types)
-        destinations = [s for s in squares if not self.map.get_square_contents(s)]
+        # Filter out squares that contain blocking figures (but allow markers)
+        destinations = []
+        for s in squares:
+            square_contents = self.map.get_square_contents(s)
+            # Allow empty squares or squares containing only markers
+            blocking_figures = [f for f in square_contents if f.figure_type != FigureType.MARKER]
+            if not blocking_figures:
+                destinations.append(s)
+        
+        # Always allow staying in current position (no move)
+        if self.figure.position not in destinations:
+            destinations.append(self.figure.position)
         return destinations
 
     def get_valid_attack_targets(self, range):
