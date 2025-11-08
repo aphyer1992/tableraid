@@ -2,13 +2,11 @@ import tkinter as tk
 from figure import FigureType
 from coords import Coords
 from effects_display import EFFECTS_DISPLAY
-from game_state import GameStateManager
 
 class GameUI:
     def __init__(self, map, heroes):
         self.map = map
         self.heroes = heroes
-        self.state_manager = GameStateManager(map)
         self.root = tk.Tk()
         self.root.title("Tableraid")
         self.left_panel = tk.Frame(self.root)
@@ -29,7 +27,6 @@ class GameUI:
         self.select_color = None
         self.select_cmd = None
         self.end_round_button = None
-        self.restart_round_button = None
 
         self.setup_placement()
         self.draw_everything()
@@ -62,9 +59,6 @@ class GameUI:
         else:
             self.select_mode = None
             self.placement_label.destroy()
-            # Start the first hero turn and capture initial state
-            self.map.begin_hero_turn()
-            self.state_manager.capture_round_start_snapshot()
             self.draw_hero_panel()
             self.draw_map()
 
@@ -153,15 +147,8 @@ class GameUI:
                     )
                     btn.pack(side=tk.LEFT)
 
-        # Button frame for better layout
-        button_frame = tk.Frame(self.left_panel)
-        button_frame.pack(side=tk.BOTTOM, pady=10)
-        
-        self.end_round_button = tk.Button(button_frame, text="End Round", command=self.end_round)
-        self.end_round_button.pack(side=tk.LEFT, padx=5)
-        
-        self.restart_round_button = tk.Button(button_frame, text="Restart Round", command=self.restart_round, bg="#ffcccc")
-        self.restart_round_button.pack(side=tk.LEFT, padx=5)
+        self.end_round_button = tk.Button(self.left_panel, text="End Round", command=self.end_round)
+        self.end_round_button.pack(side=tk.BOTTOM, pady=10)
 
     def get_figure_representation(self, cell_contents):
         if not cell_contents:
@@ -305,22 +292,8 @@ class GameUI:
         self.map.end_hero_turn()
         self.map.execute_boss_turn()
         self.map.begin_hero_turn()
-        # Capture state for the new round
-        self.state_manager.capture_round_start_snapshot()
         # Reset UI for new hero turn
         self.draw_everything()
-    
-    def restart_round(self):
-        """Restart the current round to the beginning of the hero turn."""
-        if self.state_manager.restore_round_start_snapshot():
-            # Clear any active selection modes
-            self.select_mode = None
-            self.valid_choices = []
-            # Refresh the UI
-            self.draw_everything()
-            print("🔄 Round restarted successfully!")
-        else:
-            print("❌ Cannot restart round - no saved state available!")
 
     def activate_hero(self, hero):
         hero.activate()

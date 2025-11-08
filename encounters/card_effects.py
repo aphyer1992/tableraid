@@ -1,6 +1,7 @@
 from figure import Figure, FigureType
 from coords import Coords
 from encounters.enemy_ai import basic_action, choose_target_hero, make_enemy_move
+import figure
 from game_events import GameEvent
 import random
 
@@ -80,9 +81,8 @@ def sael_frost_tomb(map, sael):
     target_hero.targetable = False
     target_hero.add_condition("Stunned", 99)
 
-    def tomb_damage_listener(figure):
-        if figure == target_hero:
-            map.deal_damage(tomb, target_hero, physical_damage=0, elemental_damage=1)
+    def tomb_damage_listener():
+        map.deal_damage(tomb, target_hero, physical_damage=0, elemental_damage=1)
 
     def tomb_freedom_listener(figure):
         if figure == tomb:
@@ -91,8 +91,8 @@ def sael_frost_tomb(map, sael):
             map.events.deregister("figure_death", listener_id)
 
     # tomb regularly damages, you are freed when it dies
-    map.events.register(GameEvent.HERO_TURN_START, lambda figure: tomb_damage_listener(figure))
-    map.events.register(GameEvent.BOSS_TURN_START, lambda figure: tomb_damage_listener(figure))
+    map.events.register(GameEvent.HERO_TURN_START, lambda: tomb_damage_listener())
+    map.events.register(GameEvent.BOSS_TURN_START, lambda: tomb_damage_listener())
     listener_id = map.events.register(GameEvent.FIGURE_DEATH, lambda figure: tomb_freedom_listener(figure))
 
 def sael_whirlwind(map, sael):
