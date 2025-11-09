@@ -2,6 +2,7 @@ import tkinter as tk
 from figure import FigureType
 from coords import Coords
 from effects_display import EFFECTS_DISPLAY
+from game_targeting import TargetingContext
 
 class GameUI:
     def __init__(self, map, heroes):
@@ -159,26 +160,26 @@ class GameUI:
                 "background_color": None
             }
         
-        if len(cell_contents) > 1:
-            front_figures = [f for f in cell_contents if f.figure_type != FigureType.MARKER and f.targetable]
-            if front_figures:
-                assert(len(front_figures) == 1), "There should be only one front figure in a cell"
-                figure = front_figures[0]
-            else:
-                figure = cell_contents[0]
-        else:
-            figure = cell_contents[0]
+        # Find the maximum render priority among all figures in the cell
+        max_priority = max(f.targeting_parameters[TargetingContext.RENDERING_PRIORITY] for f in cell_contents)
+        
+        # Filter for figures with the maximum render priority
+        max_priority_figures = [f for f in cell_contents if f.targeting_parameters[TargetingContext.RENDERING_PRIORITY] == max_priority]
+        
+        assert(len(max_priority_figures) == 1), f"There should be only one figure with max render priority {max_priority}, but found {len(max_priority_figures)}"
+        figure = max_priority_figures[0]
 
         right_effects = []
         left_effects = []
         base_text = figure.get_representation_text()
         
-        # Check for figure-specific background color
+        # Check for figure-specific background color, prioritizing by render priority
         background_color = None
-        for any_figure in cell_contents:
-            if hasattr(any_figure, 'cell_color') and any_figure.cell_color:
-                background_color = any_figure.cell_color
-                break
+        figures_with_colors = [f for f in cell_contents if hasattr(f, 'cell_color') and f.cell_color]
+        if figures_with_colors:
+            # Sort by rendering priority (highest first) and take the first one's color
+            figures_with_colors.sort(key=lambda f: f.targeting_parameters[TargetingContext.RENDERING_PRIORITY], reverse=True)
+            background_color = figures_with_colors[0].cell_color
         
         for effect, details in EFFECTS_DISPLAY.items():
             # Get quantity from the appropriate source

@@ -1,10 +1,15 @@
 import random
 from figure import FigureType
+from game_targeting import TargetingContext
 
 def choose_target_hero(map, figure):
     closest_heroes = []
     closest_distance = float('inf')
     for hero_figure in map.get_figures_by_type(FigureType.HERO):
+        # Check if this hero is targetable by enemies
+        if not hero_figure.targeting_parameters[TargetingContext.ENEMY_TARGETABLE]:
+            continue
+            
         distance = map.distance_between(figure.position, hero_figure.position, figure.impassible_types)
         if distance < closest_distance:
             closest_distance = distance
@@ -17,8 +22,8 @@ def choose_target_hero(map, figure):
 
     # randomize first...
     random.shuffle(closest_heroes)
-    # ...then sort by taunt level, so the one with the highest taunt is targeted first
-    closest_heroes.sort(key=lambda h: h.get_effect('taunt_level', 0), reverse=True)  # positive means they are taunting, negative the reverse
+    # ...then sort by targeting priority, so the one with the highest priority is targeted first
+    closest_heroes.sort(key=lambda h: h.targeting_parameters[TargetingContext.TARGETING_PRIORITY], reverse=True)
 
     target_hero = closest_heroes[0]  
     return(target_hero)

@@ -1,11 +1,12 @@
 from figure import FigureType
 from game_conditions import Condition
+from game_targeting import TargetingContext
 
 def warrior_taunt(figure, energy_spent, ui=None):
-    figure.add_effect('taunt_level', 1)
+    figure.targeting_parameters[TargetingContext.TARGETING_PRIORITY] += 1
 
     def end_taunt_listener(figure):
-        figure.remove_effect('taunt_level')
+        figure.targeting_parameters[TargetingContext.TARGETING_PRIORITY] -= 1
         figure.map.events.deregister("hero_turn_start", listener_id)
 
     listener_id = figure.map.events.register("hero_turn_start", lambda: end_taunt_listener(figure))
@@ -26,7 +27,7 @@ def warrior_bastion(figure, energy_spent, ui=None):
 
 def warrior_shield_bash(warrior_figure, energy_spent, ui=None):
     ui.hero_attack(warrior_figure.hero, range=1, physical_damage=energy_spent, elemental_damage=0, costs_attack_action=False)
-    warrior_figure.add_condition("Shielded", energy_spent, incremental=True)
+    warrior_figure.add_condition(Condition.SHIELDED, energy_spent, incremental=True)
     
 def paladin_smite(figure, energy_spent, ui=None):
     ui.hero_attack(figure.hero, range=1, physical_damage=0, elemental_damage=5, costs_attack_action=True)
@@ -36,13 +37,13 @@ def paladin_holy_shield(figure, energy_spent, ui=None):
     assert(figure.elemental_def == 4)
     figure.physical_def = 3
     figure.elemental_def = 3
-    figure.add_effect('taunt_level', 1)
+    figure.targeting_parameters[TargetingContext.TARGETING_PRIORITY] += 1
 
     def end_holy_shield_listener(figure_ending):
         if figure_ending == figure:
             figure.physical_def = 4
             figure.elemental_def = 4
-            figure.remove_effect('taunt_level')
+            figure.targeting_parameters[TargetingContext.TARGETING_PRIORITY] -= 1
             figure.map.events.deregister("hero_turn_start", listener_id)
 
     listener_id = figure.map.events.register("hero_turn_start", end_holy_shield_listener)
@@ -86,9 +87,9 @@ def rogue_eviscerate(figure, energy_spent, ui=None):
     figure.add_effect('combo_points', 0, overwrite=True)
 
 def rogue_vanish(figure, energy_spent, ui=None):
-    figure.add_effect('taunt_level', -1)
+    figure.targeting_parameters[TargetingContext.TARGETING_PRIORITY] -= 1
     def end_vanish_listener():
-        figure.remove_effect('taunt_level')
+        figure.targeting_parameters[TargetingContext.TARGETING_PRIORITY] += 1
         figure.map.events.deregister("hero_turn_start", listener_id)
 
     listener_id = figure.map.events.register("hero_turn_start", end_vanish_listener)
@@ -190,5 +191,5 @@ def priest_circle_of_healing(figure, energy_spent, ui=None):
             hero.heal(energy_spent, source=figure)
 
 def priest_renew(figure, energy_spent, ui=None):
-    callback_fn = lambda target: target.add_condition("Regen", 5, incremental=False)
+    callback_fn = lambda target: target.add_condition(Condition.REGEN, 5, incremental=False)
     ui.choose_friendly_target(figure.position, range=5, callback_fn=callback_fn)

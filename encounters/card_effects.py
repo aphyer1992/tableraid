@@ -10,7 +10,7 @@ def sael_biting_cold_listener(figure, roll, damage_type, map):
     counters = map.encounter.biting_cold_counters
     if damage_type == 'Elemental' and figure.figure_type == FigureType.HERO and roll <= counters:
         figure.current_health -= 1
-        figure.add_condition("Slowed", 1)
+        figure.add_condition(Condition.SLOWED, 1)
 
 def sael_avalanche_knockback_listener(figure, damage_taken, damage_source, map):
     if figure.figure_type == FigureType.HERO and isinstance(damage_source, Figure) and damage_source.figure_type == FigureType.BOSS:
@@ -42,13 +42,13 @@ def storm_shield_pulse(map, sael):
 
 def sael_storm_shield(map, sael):
     basic_action(map, sael)
-    sael.add_condition("Shielded", 10, incremental=True)
+    sael.add_condition(Condition.SHIELDED, 10, incremental=True)
     storm_shield_pulse(map, sael)
 
     listener_id = None  # placeholder
 
     def shield_listener():
-        if sael.get_condition("Shielded"):
+        if sael.get_condition(Condition.SHIELDED):
             storm_shield_pulse(map, sael)
         else:
             map.events.deregister(GameEvent.BOSS_TURN_START, listener_id)
@@ -72,7 +72,7 @@ def sael_chilling_winds(map, sael):
     for hero in heroes:
         dmg_dealt = map.deal_damage(sael, hero, physical_damage=0, elemental_damage=1)
         if dmg_dealt > 0:
-            hero.add_condition("Slowed", 1)
+            hero.add_condition(Condition.SLOWED, 1)
 
 def sael_frost_tomb(map, sael):
     basic_action(map, sael)
@@ -80,7 +80,7 @@ def sael_frost_tomb(map, sael):
     tomb = Figure("Frost Tomb", FigureType.MINION, health=5, physical_def=5, elemental_def=4, move=0, cell_color="#0D126B")
     map.add_figure(tomb, target_hero.position, on_occupied='colocate')
     target_hero.targetable = False
-    target_hero.add_condition("Stunned", 99)
+    target_hero.add_condition(Condition.STUNNED, 99)
 
     def tomb_damage_listener():
         map.deal_damage(tomb, target_hero, physical_damage=0, elemental_damage=1)
@@ -88,7 +88,7 @@ def sael_frost_tomb(map, sael):
     def tomb_freedom_listener(figure):
         if figure == tomb:
             target_hero.targetable = True
-            target_hero.remove_condition("Stunned")
+            target_hero.remove_condition(Condition.STUNNED)
             map.events.deregister("figure_death", listener_id)
 
     # tomb regularly damages, you are freed when it dies

@@ -1,7 +1,8 @@
 from game_events import GameEvent
 from game_conditions import Condition
 
-tick_down_at_start = [Condition.REGEN, Condition.SHIELDED]  # conditions that tick down at start of turn
+tick_down_at_start = [Condition.REGEN]  # conditions that tick down at start of turn
+tick_down_at_start_hero = [Condition.REGEN, Condition.SHIELDED] # boss shields work differently
 tick_down_at_end = [Condition.BURN, Condition.BLEED, Condition.STUNNED]  # conditions that tick down at end of turn
 
 def condition_turn_end_listener(figure):
@@ -23,7 +24,8 @@ def condition_turn_start_listener(figure):
         if condition == Condition.REGEN.value:
             figure.heal(1)
         
-        if any(condition == tick_condition.value for tick_condition in tick_down_at_start):
+        tick_down = tick_down_at_start_hero if figure.figure_type.value == 'hero' else tick_down_at_start
+        if any(condition == tick_condition.value for tick_condition in tick_down):
             figure.conditions[condition] = duration - 1
             print(f"DEBUG: Condition {condition} on {figure.name} ticks down to {figure.conditions[condition]}")
 

@@ -2,6 +2,7 @@ import random
 from enum import Enum
 from game_events import GameEvent
 from game_conditions import Condition
+from game_targeting import default_targeting_parameters, marker_targeting_parameters
 class FigureType(Enum):
     BOSS = 'boss'
     HERO = 'hero'
@@ -28,7 +29,7 @@ class Figure:
         elif self.figure_type == FigureType.HERO:
             self.impassible_types.append(FigureType.BOSS)
             self.impassible_types.append(FigureType.MINION)
-        self.targetable = True if self.figure_type in [FigureType.HERO, FigureType.MINION, FigureType.BOSS] else False
+        self.targeting_parameters = marker_targeting_parameters if self.figure_type == FigureType.MARKER else default_targeting_parameters
         self.conditions = {}  # e.g. { 'Burn' : 2, 'Bleed': 1 }
         self.active_effects = {} # e.g. { 'gained_combo_points': True, 'combo_points': 0 }
         self.fixed_representation = fixed_representation
