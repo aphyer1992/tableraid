@@ -1,6 +1,7 @@
 import random
 from enum import Enum
 from game_events import GameEvent
+from game_conditions import Condition
 class FigureType(Enum):
     BOSS = 'boss'
     HERO = 'hero'
@@ -126,23 +127,32 @@ class Figure:
     def get_effect(self, effect_key, default_value=None):
         return self.active_effects.get(effect_key, default_value)
 
+    def _normalize_condition_name(self, condition_name):
+        """Convert condition name to string, supporting both Condition enum and string inputs."""
+        if isinstance(condition_name, Condition):
+            return condition_name.value
+        return condition_name
+
     def add_condition(self, condition, duration, incremental=True):
-        if condition in self.conditions:
+        condition_name = self._normalize_condition_name(condition)
+        if condition_name in self.conditions:
             if incremental:
-                self.conditions[condition] += duration
+                self.conditions[condition_name] += duration
             else:
-                self.conditions[condition] = max(duration, self.conditions[condition])
+                self.conditions[condition_name] = max(duration, self.conditions[condition_name])
         else:
-            self.conditions[condition] = duration
-        self.map.events.trigger(GameEvent.CONDITION_ADDED, figure=self, condition=condition, duration=duration)
+            self.conditions[condition_name] = duration
+        self.map.events.trigger(GameEvent.CONDITION_ADDED, figure=self, condition=condition_name, duration=duration)
 
     def remove_condition(self, condition):
-        if condition in self.conditions:
-            del self.conditions[condition]
-            self.map.events.trigger(GameEvent.CONDITION_REMOVED, figure=self, condition=condition)
+        condition_name = self._normalize_condition_name(condition)
+        if condition_name in self.conditions:
+            del self.conditions[condition_name]
+            self.map.events.trigger(GameEvent.CONDITION_REMOVED, figure=self, condition=condition_name)
 
     def get_condition(self, condition, default_value=None):
-        return self.conditions.get(condition, default_value)
+        condition_name = self._normalize_condition_name(condition)
+        return self.conditions.get(condition_name, default_value)
     
     def start_figure_action(self):
         self.map.events.trigger(GameEvent.START_FIGURE_ACTION, figure=self)

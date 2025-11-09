@@ -1,13 +1,15 @@
 # effects_display.py (or in your Figure class/module)
+from game_conditions import Condition
+
 EFFECTS_DISPLAY = {
-    "Burn": {
+    Condition.BURN.value: {
         "icon": "🔥",      # Unicode or path to image
         "position": "right",
         "show_quantity": True,
         "is_condition": True,  
         "color" : "#ff4500",  # Optional color for display
     },
-    "Bleed": {
+    Condition.BLEED.value: {
         "icon" : "🩸",      # Unicode or path to image
         "position": "right",
         "show_quantity": True,
@@ -21,21 +23,21 @@ EFFECTS_DISPLAY = {
         "is_condition": False,  
         "color" : "#4682b4",  # Optional color for display
     },
-    "Stunned": {
+    Condition.STUNNED.value: {
         "icon": "⏳",      # Unicode or path to image
         "position": "right",
         "show_quantity": True,
         "is_condition": True,  
         "color" : "#ff4500",  # Optional color for display
     },
-    "Slowed": {
+    Condition.SLOWED.value: {
         "icon": "❄️",      # Unicode or path to image
         "position": "right",
         "show_quantity": True,
         "is_condition": True,  
         "color" : "#1e90ff",  # Optional color for display
     },
-    "Regen": {
+    Condition.REGEN.value: {
         "icon": "🌱",      # Unicode or path to image
         "position": "left",
         "show_quantity": True,

@@ -1,16 +1,17 @@
 from game_events import GameEvent
+from game_conditions import Condition
 
-tick_down_at_start = ["Regen", "Shielded"]  # conditions that tick down at start of turn
-tick_down_at_end = ["Burn", "Bleed", "Stunned"]  # conditions that tick down at end of turn
+tick_down_at_start = [Condition.REGEN, Condition.SHIELDED]  # conditions that tick down at start of turn
+tick_down_at_end = [Condition.BURN, Condition.BLEED, Condition.STUNNED]  # conditions that tick down at end of turn
 
 def condition_turn_end_listener(figure):
     for condition, duration in figure.conditions.items():
-        if condition == "Burn":
+        if condition == Condition.BURN.value:
             figure.map.deal_damage("Burning condition", figure, physical_damage=0, elemental_damage=1)
-        elif condition == "Bleed":
+        elif condition == Condition.BLEED.value:
             figure.map.deal_damage("Bleeding condition", figure, physical_damage=1, elemental_damage=0)
         
-        if condition in tick_down_at_end: # e.g. shield does not tick down at end of turn by default
+        if any(condition == tick_condition.value for tick_condition in tick_down_at_end):
             figure.conditions[condition] = duration - 1
             print(f"DEBUG: Condition {condition} on {figure.name} ticks down to {figure.conditions[condition]}")
     
@@ -19,10 +20,10 @@ def condition_turn_end_listener(figure):
 
 def condition_turn_start_listener(figure):
     for condition, duration in figure.conditions.items():
-        if condition == "Regen":
+        if condition == Condition.REGEN.value:
             figure.heal(1)
         
-        if condition in tick_down_at_start:
+        if any(condition == tick_condition.value for tick_condition in tick_down_at_start):
             figure.conditions[condition] = duration - 1
             print(f"DEBUG: Condition {condition} on {figure.name} ticks down to {figure.conditions[condition]}")
 
@@ -30,22 +31,30 @@ def condition_turn_start_listener(figure):
     figure.conditions = {k: v for k, v in figure.conditions.items() if v > 0}
 
 def slow_listener(figure, move_data):
-    if "Slowed" in figure.conditions:
+    if Condition.SLOWED.value in figure.conditions:
         move_data["value"] = min(move_data["value"], 1)
 
 def shield_listener(figure, damage_taken, **kwargs):
-    if "Shielded" in figure.conditions:
-        shield_amount = figure.conditions["Shielded"]
+    if Condition.SHIELDED.value in figure.conditions:
+        shield_amount = figure.conditions[Condition.SHIELDED.value]
         physical_blocked = min(shield_amount, damage_taken["physical_damage_taken"])
         elemental_blocked = min(shield_amount - physical_blocked, damage_taken["elemental_damage_taken"])
         damage_taken["physical_damage_taken"] -= physical_blocked
         damage_taken["elemental_damage_taken"] -= elemental_blocked
-        figure.conditions["Shielded"] -= (physical_blocked + elemental_blocked)
-        if figure.conditions["Shielded"] <= 0:
-            del figure.conditions["Shielded"]
+        figure.conditions[Condition.SHIELDED.value] -= (physical_blocked + elemental_blocked)
+        if figure.conditions[Condition.SHIELDED.value] <= 0:
+            del figure.conditions[Condition.SHIELDED.value]
+
+def stunned_action_listener(figure):
+    """Prevent stunned heroes from taking actions by immediately disabling move/attack when they activate"""
+    if Condition.STUNNED.value in figure.conditions and figure.figure_type.value == 'hero':
+        print(f'{figure.name} is stunned and cannot move or attack!')
+        figure.hero.move_available = False
+        figure.hero.attack_available = False
 
 def setup_condition_listeners(map):
     map.events.register(GameEvent.START_FIGURE_ACTION, condition_turn_start_listener)
     map.events.register(GameEvent.END_FIGURE_ACTION, condition_turn_end_listener)
     map.events.register(GameEvent.GET_MOVE, slow_listener)
     map.events.register(GameEvent.DAMAGE_TAKEN, shield_listener)
+    map.events.register(GameEvent.START_FIGURE_ACTION, stunned_action_listener)

@@ -1,4 +1,5 @@
 from figure import FigureType
+from game_conditions import Condition
 
 def warrior_taunt(figure, energy_spent, ui=None):
     figure.add_effect('taunt_level', 1)
@@ -139,7 +140,7 @@ def ranger_quick_step(figure, energy_spent, ui=None):
     ui.hero_move(figure.hero, move_distance=1, costs_move_action=False)
 
 def mage_fireball_callback(figure, target, dmg_dealt, ui):
-    target.add_condition("Burn", 5, incremental=False)
+    target.add_condition(Condition.BURN, 5, incremental=False)
 
 def mage_fireball(figure, energy_spent, ui=None):
     ui.hero_attack(
@@ -161,7 +162,7 @@ def mage_fire_nova(figure, energy_spent, ui=None):
 def mage_combustion_listener(mage_hero, figure, roll, damage_type, damage_source):
     if damage_source != mage_hero.figure:
         return
-    if damage_type == 'Elemental' and figure.get_condition('Burn') is not None:
+    if damage_type == 'Elemental' and figure.get_condition(Condition.BURN) is not None:
         if roll == 1:
             print('Mage Combustion triggered for bonus HP and Energy!')
             mage_hero.figure.heal(1, source=mage_hero.figure)

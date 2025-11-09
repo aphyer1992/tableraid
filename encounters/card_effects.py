@@ -4,6 +4,7 @@ from encounters.enemy_ai import basic_action, choose_target_hero, make_enemy_mov
 import figure
 from game_events import GameEvent
 import random
+from game_conditions import Condition
 
 def sael_biting_cold_listener(figure, roll, damage_type, map):
     counters = map.encounter.biting_cold_counters
@@ -62,7 +63,7 @@ def sael_icicle_shards(map, sael):
     for hero in heroes:
         dmg_dealt = map.deal_damage(sael, hero, physical_damage=1, elemental_damage=0)
         if dmg_dealt > 0:
-            hero.add_condition("Bleed", hero.max_health - hero.current_health)
+            hero.add_condition(Condition.BLEED, hero.max_health - hero.current_health)
 
 def sael_chilling_winds(map, sael):
     basic_action(map, sael)
