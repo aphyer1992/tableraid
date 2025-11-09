@@ -16,7 +16,7 @@ EFFECTS_DISPLAY = {
         "is_condition": True,  
         "color" : "#8b0000",  # Optional color for display
     },
-    "shield_counters": {
+    Condition.SHIELDED.value: {
         "icon": "🛡️",
         "position": "left",
         "show_quantity": False,
