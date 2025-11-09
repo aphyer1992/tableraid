@@ -1,6 +1,8 @@
 from figure import Figure, FigureType
 import copy
 
+from game_targeting import TargetingContext
+
 class Hero:
     def __init__(self, archetype):
         self.name = archetype['name']
@@ -46,7 +48,7 @@ class Hero:
 
     def get_valid_attack_targets(self, range):
         figures = self.map.get_figures_within_distance(self.figure.position, range)
-        figures = [f for f in figures if f.targetable and f.figure_type in [FigureType.BOSS, FigureType.MINION]]
+        figures = [f for f in figures if f.targeting_parameters[TargetingContext.ENEMY_TARGETABLE] and f.figure_type in [FigureType.BOSS, FigureType.MINION]]
         return figures
     
     def reset_turn(self):

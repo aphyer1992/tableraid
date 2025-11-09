@@ -6,10 +6,13 @@ tick_down_at_start_hero = [Condition.REGEN, Condition.SHIELDED] # boss shields w
 tick_down_at_end = [Condition.BURN, Condition.BLEED, Condition.STUNNED]  # conditions that tick down at end of turn
 
 def condition_turn_end_listener(figure):
+    print(f"DEBUG: condition_turn_end_listener called for {figure.name}, conditions: {figure.conditions}")
     for condition, duration in figure.conditions.items():
         if condition == Condition.BURN.value:
+            print(f"DEBUG: Applying burn damage to {figure.name}")
             figure.map.deal_damage("Burning condition", figure, physical_damage=0, elemental_damage=1)
         elif condition == Condition.BLEED.value:
+            print(f"DEBUG: Applying bleed damage to {figure.name}")
             figure.map.deal_damage("Bleeding condition", figure, physical_damage=1, elemental_damage=0)
         
         if any(condition == tick_condition.value for tick_condition in tick_down_at_end):
@@ -43,6 +46,7 @@ def shield_listener(figure, damage_taken, **kwargs):
         elemental_blocked = min(shield_amount - physical_blocked, damage_taken["elemental_damage_taken"])
         damage_taken["physical_damage_taken"] -= physical_blocked
         damage_taken["elemental_damage_taken"] -= elemental_blocked
+        print(f"{figure.name}'s Shielded condition blocks {physical_blocked} physical and {elemental_blocked} elemental damage.")
         figure.conditions[Condition.SHIELDED.value] -= (physical_blocked + elemental_blocked)
         if figure.conditions[Condition.SHIELDED.value] <= 0:
             del figure.conditions[Condition.SHIELDED.value]

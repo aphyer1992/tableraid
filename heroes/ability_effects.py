@@ -1,15 +1,16 @@
 from figure import FigureType
 from game_conditions import Condition
 from game_targeting import TargetingContext
+from game_events import GameEvent
 
 def warrior_taunt(figure, energy_spent, ui=None):
     figure.targeting_parameters[TargetingContext.TARGETING_PRIORITY] += 1
 
-    def end_taunt_listener(figure):
+    def end_taunt_listener():
         figure.targeting_parameters[TargetingContext.TARGETING_PRIORITY] -= 1
-        figure.map.events.deregister("hero_turn_start", listener_id)
+        figure.map.events.deregister(GameEvent.HERO_TURN_START, listener_id)
 
-    listener_id = figure.map.events.register("hero_turn_start", lambda: end_taunt_listener(figure))
+    listener_id = figure.map.events.register(GameEvent.HERO_TURN_START, end_taunt_listener)
 
 def warrior_bastion(figure, energy_spent, ui=None):
     assert(figure.physical_def == 3)
@@ -17,13 +18,12 @@ def warrior_bastion(figure, energy_spent, ui=None):
     figure.physical_def = 2
     figure.elemental_def = 4
 
-    def end_bastion_listener(figure_ending):
-        if figure_ending == figure:
-            figure.physical_def = 3
-            figure.elemental_def = 5
-            figure.map.events.deregister("hero_turn_start", listener_id)
+    def end_bastion_listener():
+        figure.physical_def = 3
+        figure.elemental_def = 5
+        figure.map.events.deregister(GameEvent.HERO_TURN_START, listener_id)
 
-    listener_id = figure.map.events.register("hero_turn_start", end_bastion_listener)
+    listener_id = figure.map.events.register(GameEvent.HERO_TURN_START, end_bastion_listener)
 
 def warrior_shield_bash(warrior_figure, energy_spent, ui=None):
     ui.hero_attack(warrior_figure.hero, range=1, physical_damage=energy_spent, elemental_damage=0, costs_attack_action=False)
@@ -39,14 +39,13 @@ def paladin_holy_shield(figure, energy_spent, ui=None):
     figure.elemental_def = 3
     figure.targeting_parameters[TargetingContext.TARGETING_PRIORITY] += 1
 
-    def end_holy_shield_listener(figure_ending):
-        if figure_ending == figure:
-            figure.physical_def = 4
-            figure.elemental_def = 4
-            figure.targeting_parameters[TargetingContext.TARGETING_PRIORITY] -= 1
-            figure.map.events.deregister("hero_turn_start", listener_id)
+    def end_holy_shield_listener():
+        figure.physical_def = 4
+        figure.elemental_def = 4
+        figure.targeting_parameters[TargetingContext.TARGETING_PRIORITY] -= 1
+        figure.map.events.deregister(GameEvent.HERO_TURN_START, listener_id)
 
-    listener_id = figure.map.events.register("hero_turn_start", end_holy_shield_listener)
+    listener_id = figure.map.events.register(GameEvent.HERO_TURN_START, end_holy_shield_listener)
 
 def paladin_healing_light(figure, energy_spent, ui=None):
     assert(energy_spent >= 1)
@@ -90,15 +89,15 @@ def rogue_vanish(figure, energy_spent, ui=None):
     figure.targeting_parameters[TargetingContext.TARGETING_PRIORITY] -= 1
     def end_vanish_listener():
         figure.targeting_parameters[TargetingContext.TARGETING_PRIORITY] += 1
-        figure.map.events.deregister("hero_turn_start", listener_id)
+        figure.map.events.deregister(GameEvent.HERO_TURN_START, listener_id)
 
-    listener_id = figure.map.events.register("hero_turn_start", end_vanish_listener)
+    listener_id = figure.map.events.register(GameEvent.HERO_TURN_START, end_vanish_listener)
 
     # Check if there's an adjacent enemy
     adjacent_enemies = []
     for neighbor in figure.map.get_horver_neighbors(figure.position) + figure.map.get_diag_neighbors(figure.position):
         for fig in figure.map.get_square_contents(neighbor):
-            if fig.figure_type in [FigureType.BOSS, FigureType.MINION] and fig.targetable:
+            if fig.figure_type in [FigureType.BOSS, FigureType.MINION]:
                 adjacent_enemies.append(fig)
     
     # Only allow vanish movement if there's an adjacent enemy
@@ -155,7 +154,7 @@ def mage_fireball(figure, energy_spent, ui=None):
 
 def mage_fire_nova(figure, energy_spent, ui=None):
     in_range = figure.map.get_figures_within_distance(figure.position, 2)
-    targets = [f for f in in_range if f.targetable and f.figure_type != FigureType.HERO]
+    targets = [f for f in in_range if f.targeting_parameters[TargetingContext.AOE_ABILITY_HITTABLE] and f.figure_type != FigureType.HERO]
     for target in targets:
         # this jumps directly to the execute_attack because no target selection is needed.
         ui.execute_attack(figure, target, physical_damage=0, elemental_damage=energy_spent, costs_attack_action=False)
@@ -185,7 +184,7 @@ def priest_word_of_healing(figure, energy_spent, ui=None):
 
 def priest_circle_of_healing(figure, energy_spent, ui=None):
     assert(energy_spent >= 1)
-    heroes = figure.map.get_figures_by_type(FigureType.HERO)
+    heroes = figure.map.get_figures_by_type(FigureType.HERO, {TargetingContext.ALLY_TARGETABLE: True})
     for hero in heroes:
         if figure.map.distance_between(figure.position, hero.position) <= 2:
             hero.heal(energy_spent, source=figure)

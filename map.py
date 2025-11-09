@@ -2,6 +2,7 @@ from coords import Coords
 from figure import FigureType
 from events import EventManager
 from game_events import GameEvent
+from game_targeting import TargetingContext
 from conditions import setup_condition_listeners
 import math
 import random
@@ -118,8 +119,38 @@ class Map:
                 return figure
         return None
     
-    def get_figures_by_type(self, figure_type):
-        return [figure for figure in self.figures if figure.figure_type == figure_type]
+    def get_figures_by_type(self, figure_type, targeting_filters=None):
+        """
+        Get figures by type, optionally filtered by targeting parameters.
+        
+        Args:
+            figure_type: FigureType or list of FigureTypes to filter by
+            targeting_filters: Dict of {TargetingContext: expected_value} to filter by
+                              Only figures where ALL filters match will be returned
+        
+        Returns:
+            List of figures matching the criteria
+        """
+        # Handle both single type and list of types
+        if isinstance(figure_type, list):
+            figures = [figure for figure in self.figures if figure.figure_type in figure_type]
+        else:
+            figures = [figure for figure in self.figures if figure.figure_type == figure_type]
+        
+        # Apply targeting parameter filters if provided
+        if targeting_filters:
+            filtered_figures = []
+            for figure in figures:
+                matches_all_filters = True
+                for context, expected_value in targeting_filters.items():
+                    if figure.targeting_parameters[context] != expected_value:
+                        matches_all_filters = False
+                        break
+                if matches_all_filters:
+                    filtered_figures.append(figure)
+            return filtered_figures
+        
+        return figures
 
     def get_figures_by_name(self, name):
         return [figure for figure in self.figures if figure.name == name]

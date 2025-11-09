@@ -3,6 +3,8 @@ from coords import Coords
 from encounters.enemy_ai import basic_action, choose_target_hero, make_enemy_move
 import figure
 from game_events import GameEvent
+from game_conditions import Condition
+from game_targeting import TargetingContext
 import random
 from game_conditions import Condition
 
@@ -36,7 +38,7 @@ def sael_frozen_servants(map, sael):
     
 def storm_shield_pulse(map, sael):
     print('Storm Shield pulse from Sa\'el!')
-    heroes = map.get_figures_by_type(FigureType.HERO)
+    heroes = map.get_figures_by_type(FigureType.HERO, {TargetingContext.AOE_ABILITY_HITTABLE: True})
     for hero in heroes:
         map.deal_damage(sael, hero, physical_damage=0, elemental_damage=1)
 
@@ -58,7 +60,7 @@ def sael_storm_shield(map, sael):
 def sael_icicle_shards(map, sael):
     basic_action(map, sael)
 
-    heroes = map.get_figures_by_type(FigureType.HERO)
+    heroes = map.get_figures_by_type(FigureType.HERO, {TargetingContext.AOE_ABILITY_HITTABLE: True})
     print(heroes)
     for hero in heroes:
         dmg_dealt = map.deal_damage(sael, hero, physical_damage=1, elemental_damage=0)
@@ -68,7 +70,7 @@ def sael_icicle_shards(map, sael):
 def sael_chilling_winds(map, sael):
     basic_action(map, sael)
 
-    heroes = map.get_figures_by_type(FigureType.HERO)
+    heroes = map.get_figures_by_type(FigureType.HERO, {TargetingContext.AOE_ABILITY_HITTABLE: True})
     for hero in heroes:
         dmg_dealt = map.deal_damage(sael, hero, physical_damage=0, elemental_damage=1)
         if dmg_dealt > 0:
@@ -76,10 +78,14 @@ def sael_chilling_winds(map, sael):
 
 def sael_frost_tomb(map, sael):
     basic_action(map, sael)
-    target_hero = random.choice(map.get_figures_by_type(FigureType.HERO))
+    target_hero = random.choice(map.get_figures_by_type(FigureType.HERO, {TargetingContext.ENEMY_TARGETABLE: True}))
     tomb = Figure("Frost Tomb", FigureType.MINION, health=5, physical_def=5, elemental_def=4, move=0, cell_color="#0D126B")
+    tomb.targeting_parameters[TargetingContext.RENDERING_PRIORITY] = 1 # in front of the hero.
     map.add_figure(tomb, target_hero.position, on_occupied='colocate')
-    target_hero.targetable = False
+    
+    # Make hero not targetable by enemies or AOE, but still targetable by allies
+    target_hero.targeting_parameters[TargetingContext.ENEMY_TARGETABLE] = False
+    target_hero.targeting_parameters[TargetingContext.AOE_ABILITY_HITTABLE] = False
     target_hero.add_condition(Condition.STUNNED, 99)
 
     def tomb_damage_listener():
@@ -87,7 +93,9 @@ def sael_frost_tomb(map, sael):
 
     def tomb_freedom_listener(figure):
         if figure == tomb:
-            target_hero.targetable = True
+            # Restore targeting parameters when freed
+            target_hero.targeting_parameters[TargetingContext.ENEMY_TARGETABLE] = True
+            target_hero.targeting_parameters[TargetingContext.AOE_ABILITY_HITTABLE] = True
             target_hero.remove_condition(Condition.STUNNED)
             map.events.deregister("figure_death", listener_id)
 
@@ -99,7 +107,7 @@ def sael_frost_tomb(map, sael):
 def sael_whirlwind(map, sael):
     target_hero = choose_target_hero(map, sael)
     make_enemy_move(map, enemy=sael, player=target_hero)
-    for hero in map.get_figures_by_type(FigureType.HERO):
+    for hero in map.get_figures_by_type(FigureType.HERO, {TargetingContext.AOE_ABILITY_HITTABLE: True}):
         if map.distance_between(sael.position, hero.position) <= 2:
             map.deal_damage(sael, hero, physical_damage=sael.physical_dmg, elemental_damage=sael.elemental_dmg + 1)
 
@@ -112,7 +120,7 @@ def sael_frost_breath(map, sael):
     else:
         target_area = []
 
-    for hero in map.get_figures_by_type(FigureType.HERO):
+    for hero in map.get_figures_by_type(FigureType.HERO, {TargetingContext.AOE_ABILITY_HITTABLE: True}):
         if hero.position in target_area:
             map.deal_damage(sael, hero, physical_damage=0, elemental_damage=3)
     return
@@ -121,7 +129,7 @@ def sael_ice_collapse_listener(map):
     markers = map.get_figures_by_name("Incoming Ice")
     assert(len(markers) == 2), "There should be exactly two Incoming Ice markers"
     for marker in markers:
-        for hero in map.get_figures_by_type(FigureType.HERO):
+        for hero in map.get_figures_by_type(FigureType.HERO, {TargetingContext.AOE_ABILITY_HITTABLE: True}):
             if hero.position == marker.position:
                 map.deal_damage(marker, hero, physical_damage=4, elemental_damage=4)
             if map.distance_between(marker.position, hero.position) == 1:
@@ -134,7 +142,7 @@ def sael_ice_collapse_listener(map):
 
 def sael_ice_collapse(map, sael):
     basic_action(map, sael)
-    target_heroes = random.sample(map.get_figures_by_type(FigureType.HERO), 2)
+    target_heroes = random.sample(map.get_figures_by_type(FigureType.HERO, {TargetingContext.ENEMY_TARGETABLE: True}), 2)
     for hero in target_heroes:
         incoming_ice = Figure("Incoming Ice", FigureType.MARKER, cell_color="#FFB6C1")
         map.add_figure(incoming_ice, hero.position, on_occupied='colocate')
@@ -154,7 +162,7 @@ def sael_eye_of_the_storm(map, sael):
     # not sure where this lives, pending figuring out how that affects elemental damage
     map.encounter.biting_cold_counters += 1
     
-    heroes = map.get_figures_by_type(FigureType.HERO)
+    heroes = map.get_figures_by_type(FigureType.HERO, {TargetingContext.AOE_ABILITY_HITTABLE: True})
     heroes.sort(key=lambda h: map.get_distance(sael.position, h.position), reverse=True)  # from furthest to closest
     for hero in heroes:
         # doesn't actually deal damage, just knocks back.

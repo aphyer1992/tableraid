@@ -16,6 +16,7 @@ from figure import Figure, FigureType
 import random
 from coords import Coords
 from encounters.enemy_ai import basic_action
+from game_targeting import TargetingContext
 
 sael_cards = [
     {   
@@ -152,7 +153,7 @@ class EncounterSael(EncounterBase):
         else:
             raise ValueError("Blizzard is in an unexpected position: {}".format(blizzard.position))
         
-        for hero in self.map.get_figures_by_type(FigureType.HERO):
+        for hero in self.map.get_figures_by_type(FigureType.HERO, {TargetingContext.AOE_ABILITY_HITTABLE: True}):
             if self.map.distance_between(blizzard.position, hero.position) <= 2:
                 self.map.deal_damage(blizzard, hero, physical_damage=0, elemental_damage=1)
 

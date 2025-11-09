@@ -5,11 +5,7 @@ from game_targeting import TargetingContext
 def choose_target_hero(map, figure):
     closest_heroes = []
     closest_distance = float('inf')
-    for hero_figure in map.get_figures_by_type(FigureType.HERO):
-        # Check if this hero is targetable by enemies
-        if not hero_figure.targeting_parameters[TargetingContext.ENEMY_TARGETABLE]:
-            continue
-            
+    for hero_figure in map.get_figures_by_type(FigureType.HERO, {TargetingContext.ENEMY_TARGETABLE: True}):        
         distance = map.distance_between(figure.position, hero_figure.position, figure.impassible_types)
         if distance < closest_distance:
             closest_distance = distance
