@@ -97,7 +97,7 @@ def sael_frost_tomb(map, sael):
             target_hero.targeting_parameters[TargetingContext.ENEMY_TARGETABLE] = True
             target_hero.targeting_parameters[TargetingContext.AOE_ABILITY_HITTABLE] = True
             target_hero.remove_condition(Condition.STUNNED)
-            map.events.deregister("figure_death", listener_id)
+            map.events.deregister(GameEvent.FIGURE_DEATH, listener_id)
 
     # tomb regularly damages, you are freed when it dies
     map.events.register(GameEvent.HERO_TURN_START, lambda: tomb_damage_listener())
