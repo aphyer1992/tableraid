@@ -29,7 +29,7 @@ class Figure:
         elif self.figure_type == FigureType.HERO:
             self.impassible_types.append(FigureType.BOSS)
             self.impassible_types.append(FigureType.MINION)
-        self.targeting_parameters = marker_targeting_parameters if self.figure_type == FigureType.MARKER else default_targeting_parameters
+        self.targeting_parameters = marker_targeting_parameters.copy() if self.figure_type == FigureType.MARKER else default_targeting_parameters.copy()
         self.conditions = {}  # e.g. { 'Burn' : 2, 'Bleed': 1 }
         self.active_effects = {} # e.g. { 'gained_combo_points': True, 'combo_points': 0 }
         self.fixed_representation = fixed_representation

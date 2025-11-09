@@ -113,8 +113,8 @@ def rogue_vanish(figure, energy_spent, ui=None):
             for enemy in adjacent_enemies:
                 current_distance = figure.map.distance_between(current_pos, enemy.position)
                 new_distance = figure.map.distance_between(destination, enemy.position)
-                # Must move to equal or greater distance from each enemy
-                if new_distance < current_distance:
+                # Must move to greater distance from each enemy
+                if new_distance <= current_distance:
                     can_move_here = False
                     break
             

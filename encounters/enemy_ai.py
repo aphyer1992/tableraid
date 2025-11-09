@@ -7,6 +7,9 @@ def choose_target_hero(map, figure):
     closest_distance = float('inf')
     for hero_figure in map.get_figures_by_type(FigureType.HERO, {TargetingContext.ENEMY_TARGETABLE: True}):        
         distance = map.distance_between(figure.position, hero_figure.position, figure.impassible_types)
+        priority = hero_figure.targeting_parameters[TargetingContext.TARGETING_PRIORITY]
+        print(f"DEBUG:   {hero_figure.name} at distance {distance}, targeting priority {priority}")
+        
         if distance < closest_distance:
             closest_distance = distance
             closest_heroes = [hero_figure]
