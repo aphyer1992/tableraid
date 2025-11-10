@@ -108,8 +108,8 @@ smite_ability = Ability(
 
 holy_shield_ability = Ability(
     name="Holy Shield",
-    description="Raise your defenses by 1 and taunt enemies until next turn.",
-    energy_cost=0,
+    description="Deal 1 Elemental damage to all adjacent enemies.  Raise your defenses by 1 and taunt until next turn.",
+    energy_cost=1,
     variable_cost=False,
     move_cost=False,
     attack_cost=False,

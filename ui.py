@@ -305,7 +305,7 @@ class GameUI:
 
     def hero_move(self, hero, move_distance=None, costs_move_action=False, valid_destinations=None):
         if move_distance is None:
-            move_distance = hero.archetype['move']
+            move_distance = hero.figure.move  # Use the property that triggers GET_MOVE events
         self.select_mode = 'hero_move'
         
         # Use custom destinations if provided, otherwise calculate normal movement

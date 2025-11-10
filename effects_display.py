@@ -19,8 +19,8 @@ EFFECTS_DISPLAY = {
     Condition.SHIELDED.value: {
         "icon": "🛡️",
         "position": "left",
-        "show_quantity": False,
-        "is_condition": False,  
+        "show_quantity": True,
+        "is_condition": True,  
         "color" : "#4682b4",  # Optional color for display
     },
     Condition.STUNNED.value: {

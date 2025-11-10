@@ -33,6 +33,12 @@ def paladin_smite(figure, energy_spent, ui=None):
     ui.hero_attack(figure.hero, range=1, physical_damage=0, elemental_damage=5, costs_attack_action=True)
 
 def paladin_holy_shield(figure, energy_spent, ui=None):
+    in_range = figure.map.get_figures_within_distance(figure.position, 1)
+    targets = [f for f in in_range if f.targeting_parameters[TargetingContext.AOE_ABILITY_HITTABLE] and f.figure_type != FigureType.HERO]
+    for target in targets:
+        # this jumps directly to the execute_attack because no target selection is needed.
+        ui.execute_attack(figure, target, physical_damage=0, elemental_damage=1, costs_attack_action=False)
+
     assert(figure.physical_def == 4)
     assert(figure.elemental_def == 4)
     figure.physical_def = 3
