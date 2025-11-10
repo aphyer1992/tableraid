@@ -162,7 +162,7 @@ power_shot_ability = Ability(
     description="Deal 5 physical damage to an enemy within Range 5.",
     energy_cost=1,
     variable_cost=False,
-    move_cost=False,
+    move_cost=True,
     attack_cost=True,
     effect_fn=ranger_power_shot  # Placeholder for the actual effect function
 )

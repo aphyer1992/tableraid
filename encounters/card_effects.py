@@ -96,7 +96,7 @@ def sael_frost_tomb(map, sael):
             target_hero.targeting_parameters[TargetingContext.AOE_ABILITY_HITTABLE] = True
             target_hero.remove_condition(Condition.STUNNED)
             
-            # Re-enable hero actions if it's currently their turn - needed due to how Stun currently works.
+            # Re-enable hero actions - needed due to how Stun currently works.
             if target_hero.figure_type == FigureType.HERO:
                 target_hero.hero.move_available = True
                 target_hero.hero.attack_available = True
@@ -104,12 +104,15 @@ def sael_frost_tomb(map, sael):
                 for ability in target_hero.hero.abilities:
                     ability.used = False
             
-            map.events.deregister(GameEvent.FIGURE_DEATH, listener_id)
+            # Deregister all tomb-related listeners
+            map.events.deregister(GameEvent.HERO_TURN_START, hero_damage_listener_id)
+            map.events.deregister(GameEvent.BOSS_TURN_START, boss_damage_listener_id)
+            map.events.deregister(GameEvent.FIGURE_DEATH, death_listener_id)
 
     # tomb regularly damages, you are freed when it dies
-    map.events.register(GameEvent.HERO_TURN_START, lambda: tomb_damage_listener())
-    map.events.register(GameEvent.BOSS_TURN_START, lambda: tomb_damage_listener())
-    listener_id = map.events.register(GameEvent.FIGURE_DEATH, lambda figure: tomb_freedom_listener(figure))
+    hero_damage_listener_id = map.events.register(GameEvent.HERO_TURN_START, lambda: tomb_damage_listener())
+    boss_damage_listener_id = map.events.register(GameEvent.BOSS_TURN_START, lambda: tomb_damage_listener())
+    death_listener_id = map.events.register(GameEvent.FIGURE_DEATH, lambda figure: tomb_freedom_listener(figure))
 
 def sael_whirlwind(map, sael):
     target_hero = choose_target_hero(map, sael)
@@ -175,4 +178,4 @@ def sael_eye_of_the_storm(map, sael):
         # doesn't actually deal damage, just knocks back.
         dmg_dealt = map.deal_damage(sael, hero, physical_damage=0, elemental_damage=3, reduce_health=False)
         if dmg_dealt > 0:
-            map.knock_back(hero, dmg_dealt)
+            map.knock_back(hero, knockback_origin=sael.position, knockback_distance=dmg_dealt)
