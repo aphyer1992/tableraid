@@ -2,7 +2,6 @@ from coords import Coords
 from figure import FigureType
 from events import EventManager
 from game_events import GameEvent
-from game_targeting import TargetingContext
 from conditions import setup_condition_listeners
 import math
 import random

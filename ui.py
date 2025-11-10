@@ -301,9 +301,11 @@ class GameUI:
         self.draw_hero_panel()
 
     def hero_basic_move_action(self, hero):
-        self.hero_move(hero, costs_move_action=True)
+        # Consume the move action before initiating the move
+        hero.move_available = False
+        self.hero_move(hero)
 
-    def hero_move(self, hero, move_distance=None, costs_move_action=False, valid_destinations=None):
+    def hero_move(self, hero, move_distance=None, valid_destinations=None):
         if move_distance is None:
             move_distance = hero.figure.move  # Use the property that triggers GET_MOVE events
         self.select_mode = 'hero_move'
@@ -315,27 +317,25 @@ class GameUI:
             self.valid_choices = hero.get_valid_move_destinations(move_distance)
         
         self.select_color = "lightgreen"
-        self.select_cmd = lambda coords: self.execute_move(hero, coords, costs_move_action)
+        self.select_cmd = lambda coords: self.execute_move(hero, coords)
         self.draw_map()
     
-    def execute_move(self, hero, coords, costs_move_action=False):
+    def execute_move(self, hero, coords):
         # Only move if the destination is different from current position
         if coords != hero.figure.position:
             self.map.move_figure(hero.figure, coords)
-        # Always consume the move action if it costs a move action (even for "no move")
-        if costs_move_action:
-            hero.move_available = False
         self.select_mode = None
         self.draw_map()
         self.draw_hero_panel()
 
     def hero_basic_attack_action(self, hero):
-        self.hero_attack(hero, costs_attack_action=True)
+        # Consume the attack action before initiating the attack
+        hero.attack_available = False
+        self.hero_attack(hero)
 
-    def hero_attack(self, hero, range=None, physical_damage=None, elemental_damage=None, costs_attack_action=False, after_attack_callback=None):
-        if physical_damage is None:
+    def hero_attack(self, hero, range=None, physical_damage=None, elemental_damage=None, after_attack_callback=None):
+        if physical_damage is None and elemental_damage is None:
             physical_damage = hero.archetype['physical_dmg']
-        if elemental_damage is None:
             elemental_damage = hero.archetype['elemental_dmg']
         if range is None:
             range = hero.archetype['attack_range']
@@ -347,13 +347,11 @@ class GameUI:
         self.select_mode = 'hero_attack'
         self.valid_choices = [t.position for t in targets]  # Use targets as valid moves for attack selection   
         self.select_color = "#ff2222"
-        self.select_cmd = lambda coords: self.execute_attack(hero.figure, targets_dict[coords], physical_damage, elemental_damage, costs_attack_action, after_attack_callback)
+        self.select_cmd = lambda coords: self.execute_attack(hero.figure, targets_dict[coords], physical_damage, elemental_damage, after_attack_callback)
         self.draw_map()
 
-    def execute_attack(self, attacking_figure, target_figure, physical_damage, elemental_damage, costs_attack_action=False, after_attack_callback=None):
+    def execute_attack(self, attacking_figure, target_figure, physical_damage, elemental_damage, after_attack_callback=None):
         dmg_dealt = self.map.deal_damage(attacking_figure, target_figure, physical_damage, elemental_damage)    
-        if costs_attack_action and attacking_figure.figure_type == FigureType.HERO:
-            attacking_figure.hero.attack_available = False
         if after_attack_callback:
             after_attack_callback(attacking_figure, target_figure, dmg_dealt, self)
         self.select_mode = None
@@ -389,6 +387,13 @@ class GameUI:
             energy_amount = ability.energy_cost
 
         hero.spend_energy(energy_amount)
+        
+        # Handle move and attack costs
+        if ability.move_cost:
+            hero.move_available = False
+        if ability.attack_cost:
+            hero.attack_available = False
+            
         ability.effect_fn(hero.figure, energy_amount, ui=self)  # No x-cost for now
         ability.used = True
         print(f"{hero.name} used {ability.name} with {energy_amount} energy")

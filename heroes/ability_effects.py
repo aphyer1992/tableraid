@@ -30,14 +30,14 @@ def warrior_shield_bash(warrior_figure, energy_spent, ui=None):
     warrior_figure.add_condition(Condition.SHIELDED, energy_spent, incremental=True)
     
 def paladin_smite(figure, energy_spent, ui=None):
-    ui.hero_attack(figure.hero, range=1, physical_damage=0, elemental_damage=5, costs_attack_action=True)
+    ui.hero_attack(figure.hero, range=1, physical_damage=0, elemental_damage=5, costs_attack_action=False)
 
 def paladin_holy_shield(figure, energy_spent, ui=None):
     in_range = figure.map.get_figures_within_distance(figure.position, 1)
     targets = [f for f in in_range if f.targeting_parameters[TargetingContext.AOE_ABILITY_HITTABLE] and f.figure_type != FigureType.HERO]
     for target in targets:
         # this jumps directly to the execute_attack because no target selection is needed.
-        ui.execute_attack(figure, target, physical_damage=0, elemental_damage=1, costs_attack_action=False)
+        ui.execute_attack(figure, target, physical_damage=0, elemental_damage=1)
 
     assert(figure.physical_def == 4)
     assert(figure.elemental_def == 4)
@@ -129,21 +129,21 @@ def rogue_vanish(figure, energy_spent, ui=None):
         
         if len(valid_vanish_destinations) > 0:
             valid_vanish_destinations.append(figure.position)  # Allow no-move option
-            ui.hero_move(figure.hero, move_distance=2, costs_move_action=False, valid_destinations=valid_vanish_destinations)
+            ui.hero_move(figure.hero, move_distance=2, valid_destinations=valid_vanish_destinations)
 
 def ranger_power_shot(figure, energy_spent, ui=None):
-    ui.hero_attack(figure.hero, physical_damage=5, elemental_damage=0, range=5, costs_attack_action=True)
+    ui.hero_attack(figure.hero, physical_damage=5, elemental_damage=0, range=5, costs_attack_action=False)
 
 def ranger_spirit_link(figure, energy_spent, ui=None):
     def spirit_link_callback(target):
         target.heal(1, source=figure)
-        ui.hero_move(target.hero, move_distance=1, costs_move_action=False)
+        ui.hero_move(target.hero, move_distance=1)
     
     ui.choose_friendly_target(figure.position, range=5, callback_fn=spirit_link_callback, auto_cleanup=False)
 
 def ranger_quick_step(figure, energy_spent, ui=None):
     assert ui
-    ui.hero_move(figure.hero, move_distance=1, costs_move_action=False)
+    ui.hero_move(figure.hero, move_distance=1)
 
 def mage_fireball_callback(figure, target, dmg_dealt, ui):
     target.add_condition(Condition.BURN, 5, incremental=False)
@@ -154,7 +154,7 @@ def mage_fireball(figure, energy_spent, ui=None):
         physical_damage=0,
         elemental_damage=4,
         range=4,
-        costs_attack_action=True,
+        costs_attack_action=False,
         after_attack_callback=mage_fireball_callback
     )
 
@@ -163,7 +163,7 @@ def mage_fire_nova(figure, energy_spent, ui=None):
     targets = [f for f in in_range if f.targeting_parameters[TargetingContext.AOE_ABILITY_HITTABLE] and f.figure_type != FigureType.HERO]
     for target in targets:
         # this jumps directly to the execute_attack because no target selection is needed.
-        ui.execute_attack(figure, target, physical_damage=0, elemental_damage=energy_spent, costs_attack_action=False)
+        ui.execute_attack(figure, target, physical_damage=0, elemental_damage=energy_spent)
 
 def mage_combustion_listener(mage_hero, figure, roll, damage_type, damage_source):
     if damage_source != mage_hero.figure:

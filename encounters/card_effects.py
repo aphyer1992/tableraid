@@ -1,12 +1,10 @@
 from figure import Figure, FigureType
 from coords import Coords
 from encounters.enemy_ai import basic_action, choose_target_hero, make_enemy_move
-import figure
 from game_events import GameEvent
 from game_conditions import Condition
 from game_targeting import TargetingContext
 import random
-from game_conditions import Condition
 
 def sael_biting_cold_listener(figure, roll, damage_type, map):
     counters = map.encounter.biting_cold_counters
@@ -163,7 +161,7 @@ def sael_eye_of_the_storm(map, sael):
     map.encounter.biting_cold_counters += 1
     
     heroes = map.get_figures_by_type(FigureType.HERO, {TargetingContext.AOE_ABILITY_HITTABLE: True})
-    heroes.sort(key=lambda h: map.get_distance(sael.position, h.position), reverse=True)  # from furthest to closest
+    heroes.sort(key=lambda h: map.distance_between(sael.position, h.position), reverse=True)  # from furthest to closest
     for hero in heroes:
         # doesn't actually deal damage, just knocks back.
         dmg_dealt = map.deal_damage(sael, hero, physical_damage=0, elemental_damage=3, reduce_health=False)
