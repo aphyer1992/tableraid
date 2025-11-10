@@ -1,5 +1,6 @@
 from game_events import GameEvent
 from game_conditions import Condition
+from figure import FigureType
 
 tick_down_at_start = [Condition.REGEN]  # conditions that tick down at start of turn
 tick_down_at_start_hero = [Condition.REGEN, Condition.SHIELDED] # boss shields work differently
@@ -7,7 +8,9 @@ tick_down_at_end = [Condition.BURN, Condition.BLEED, Condition.STUNNED, Conditio
 
 def condition_turn_end_listener(figure):
     print(f"DEBUG: condition_turn_end_listener called for {figure.name}, conditions: {figure.conditions}")
-    for condition, duration in figure.conditions.items():
+    # Create a copy of conditions to avoid "dictionary changed during iteration" errors
+    conditions_copy = dict(figure.conditions.items())
+    for condition, duration in conditions_copy.items():
         if condition == Condition.BURN.value:
             print(f"DEBUG: Applying burn damage to {figure.name}")
             figure.map.deal_damage("Burning condition", figure, physical_damage=0, elemental_damage=1)
@@ -16,8 +19,12 @@ def condition_turn_end_listener(figure):
             figure.map.deal_damage("Bleeding condition", figure, physical_damage=1, elemental_damage=0)
         
         if any(condition == tick_condition.value for tick_condition in tick_down_at_end):
-            figure.conditions[condition] = duration - 1
-            print(f"DEBUG: Condition {condition} on {figure.name} ticks down to {figure.conditions[condition]}")
+            # Check if condition still exists (might have been removed during damage dealing)
+            if condition in figure.conditions:
+                figure.conditions[condition] = duration - 1
+                print(f"DEBUG: Condition {condition} on {figure.name} ticks down to {figure.conditions[condition]}")
+            else:
+                print(f"DEBUG: Condition {condition} on {figure.name} was removed during damage processing")
     
     # remove any that have timed out.
     figure.conditions = {k: v for k, v in figure.conditions.items() if v > 0}
@@ -27,7 +34,7 @@ def condition_turn_start_listener(figure):
         if condition == Condition.REGEN.value:
             figure.heal(1)
         
-        tick_down = tick_down_at_start_hero if figure.figure_type.value == 'hero' else tick_down_at_start
+        tick_down = tick_down_at_start_hero if figure.figure_type == FigureType.HERO else tick_down_at_start
         if any(condition == tick_condition.value for tick_condition in tick_down):
             figure.conditions[condition] = duration - 1
             print(f"DEBUG: Condition {condition} on {figure.name} ticks down to {figure.conditions[condition]}")
@@ -35,9 +42,11 @@ def condition_turn_start_listener(figure):
     # remove any that have timed out.
     figure.conditions = {k: v for k, v in figure.conditions.items() if v > 0}
 
-def slow_listener(figure, move_data):
+def slow_stun_move_listener(figure, move_data):
     if Condition.SLOWED.value in figure.conditions:
         move_data["value"] = min(move_data["value"], 1)
+    if Condition.STUNNED.value in figure.conditions:
+        move_data["value"] = 0
 
 def shield_listener(figure, damage_taken, **kwargs):
     if Condition.SHIELDED.value in figure.conditions:
@@ -52,15 +61,18 @@ def shield_listener(figure, damage_taken, **kwargs):
             del figure.conditions[Condition.SHIELDED.value]
 
 def stunned_action_listener(figure):
-    """Prevent stunned heroes from taking actions by immediately disabling move/attack when they activate"""
-    if Condition.STUNNED.value in figure.conditions and figure.figure_type.value == 'hero':
-        print(f'{figure.name} is stunned and cannot move or attack!')
+    """Prevent stunned heroes from taking actions by immediately disabling move/attack/skills when they activate"""
+    if Condition.STUNNED.value in figure.conditions and figure.figure_type == FigureType.HERO:
+        print(f'{figure.name} is stunned and cannot move, attack, or use abilities!')
         figure.hero.move_available = False
         figure.hero.attack_available = False
+        # Disable all abilities by marking them as used
+        for ability in figure.hero.abilities:
+            ability.used = True
 
 def setup_condition_listeners(map):
     map.events.register(GameEvent.START_FIGURE_ACTION, condition_turn_start_listener)
     map.events.register(GameEvent.END_FIGURE_ACTION, condition_turn_end_listener)
-    map.events.register(GameEvent.GET_MOVE, slow_listener)
+    map.events.register(GameEvent.GET_MOVE, slow_stun_move_listener)
     map.events.register(GameEvent.DAMAGE_TAKEN, shield_listener)
     map.events.register(GameEvent.START_FIGURE_ACTION, stunned_action_listener)

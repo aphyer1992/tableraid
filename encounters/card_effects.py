@@ -95,6 +95,15 @@ def sael_frost_tomb(map, sael):
             target_hero.targeting_parameters[TargetingContext.ENEMY_TARGETABLE] = True
             target_hero.targeting_parameters[TargetingContext.AOE_ABILITY_HITTABLE] = True
             target_hero.remove_condition(Condition.STUNNED)
+            
+            # Re-enable hero actions if it's currently their turn - needed due to how Stun currently works.
+            if target_hero.figure_type == FigureType.HERO:
+                target_hero.hero.move_available = True
+                target_hero.hero.attack_available = True
+                # Re-enable all abilities
+                for ability in target_hero.hero.abilities:
+                    ability.used = False
+            
             map.events.deregister(GameEvent.FIGURE_DEATH, listener_id)
 
     # tomb regularly damages, you are freed when it dies
