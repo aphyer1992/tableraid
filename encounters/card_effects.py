@@ -31,8 +31,8 @@ def sael_avalanche_crush(map, sael):
 def sael_frozen_servants(map, sael):
     basic_action(map, sael)
 
-    map.add_figure(Figure("Frost Elemental", FigureType.MINION, health=5, physical_def=5, elemental_def=4, move=1), Coords(0,2)) 
-    map.add_figure(Figure("Frost Elemental", FigureType.MINION, health=5, physical_def=5, elemental_def=4, move=1), Coords(10,2)) 
+    map.add_figure(Figure("Frost Elemental", FigureType.MINION, health=5, physical_def=5, elemental_def=4, move=1, physical_dmg=1, elemental_dmg=1), Coords(0,2)) 
+    map.add_figure(Figure("Frost Elemental", FigureType.MINION, health=5, physical_def=5, elemental_def=4, move=1, physical_dmg=1, elemental_dmg=1), Coords(10,2)) 
     
 def storm_shield_pulse(map, sael):
     print('Storm Shield pulse from Sa\'el!')

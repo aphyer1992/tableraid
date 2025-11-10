@@ -277,12 +277,11 @@ class Map:
         while remaining_distance > 0 and not collided:
             valid_knockbacks = []
             if dx != 0 and dy != 0 and (remaining_distance > 1 or (not diagonal_move_expensive)):
-                valid_knockbacks.append((dx, dy))  # Diagonal move
+                valid_knockbacks.append((1 if dx > 0 else -1, 1 if dy > 0 else -1))  # Diagonal move
             if abs(dx) > abs(dy) or (abs(dx) == abs(dy) and diagonal_move_expensive and remaining_distance == 1):
-                valid_knockbacks.append((dx, 0))
+                valid_knockbacks.append((1 if dx > 0 else -1, 0))
             if abs(dy) > abs(dx) or (abs(dx) == abs(dy) and diagonal_move_expensive and remaining_distance == 1):
-                valid_knockbacks.append((0, dy))
-
+                valid_knockbacks.append((0, 1 if dy > 0 else -1))
             if not valid_knockbacks:
                 raise ValueError("No valid knockback directions found")
             
@@ -299,12 +298,12 @@ class Map:
             # Check map bounds
             if not self.coords_in_bounds(new_coords):
                 collided = True
-
-            # Check for impassible terrain or figures
-            # you can move through an ally but not knockback through them
-            impassible_types = {FigureType.OBSTACLE, FigureType.HERO, FigureType.BOSS, FigureType.MINION}
-            if any(f.figure_type in impassible_types for f in self.cell_contents[new_y][new_x]):
-                collided = True
+            else:
+                # Check for impassible terrain or figures
+                # you can move through an ally but not knockback through them
+                impassible_types = {FigureType.OBSTACLE, FigureType.HERO, FigureType.BOSS, FigureType.MINION}
+                if any(f.figure_type in impassible_types for f in self.cell_contents[new_y][new_x]):
+                    collided = True
             
             if not collided:
                 self.move_figure(figure, new_coords)
