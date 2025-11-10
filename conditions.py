@@ -3,7 +3,7 @@ from game_conditions import Condition
 
 tick_down_at_start = [Condition.REGEN]  # conditions that tick down at start of turn
 tick_down_at_start_hero = [Condition.REGEN, Condition.SHIELDED] # boss shields work differently
-tick_down_at_end = [Condition.BURN, Condition.BLEED, Condition.STUNNED]  # conditions that tick down at end of turn
+tick_down_at_end = [Condition.BURN, Condition.BLEED, Condition.STUNNED, Condition.SLOWED]  # conditions that tick down at end of turn
 
 def condition_turn_end_listener(figure):
     print(f"DEBUG: condition_turn_end_listener called for {figure.name}, conditions: {figure.conditions}")

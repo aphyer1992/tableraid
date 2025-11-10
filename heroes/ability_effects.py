@@ -26,11 +26,11 @@ def warrior_bastion(figure, energy_spent, ui=None):
     listener_id = figure.map.events.register(GameEvent.HERO_TURN_START, end_bastion_listener)
 
 def warrior_shield_bash(warrior_figure, energy_spent, ui=None):
-    ui.hero_attack(warrior_figure.hero, range=1, physical_damage=energy_spent, elemental_damage=0, costs_attack_action=False)
+    ui.hero_attack(warrior_figure.hero, range=1, physical_damage=energy_spent, elemental_damage=0)
     warrior_figure.add_condition(Condition.SHIELDED, energy_spent, incremental=True)
     
 def paladin_smite(figure, energy_spent, ui=None):
-    ui.hero_attack(figure.hero, range=1, physical_damage=0, elemental_damage=5, costs_attack_action=False)
+    ui.hero_attack(figure.hero, range=1, physical_damage=0, elemental_damage=5)
 
 def paladin_holy_shield(figure, energy_spent, ui=None):
     in_range = figure.map.get_figures_within_distance(figure.position, 1)
@@ -59,7 +59,7 @@ def paladin_healing_light(figure, energy_spent, ui=None):
     ui.choose_friendly_target(figure.position, range=5, callback_fn=callback_fn)
 
 def rogue_dual_wield(figure, energy_spent, ui=None):
-    ui.hero_attack(figure.hero, range=1, physical_damage=2, elemental_damage=0, costs_attack_action=False)
+    ui.hero_attack(figure.hero, range=1, physical_damage=2, elemental_damage=0)
     
 def rogue_eviscerate_attack_listener(damage_source, hero):
     if damage_source == hero.figure:
@@ -132,7 +132,7 @@ def rogue_vanish(figure, energy_spent, ui=None):
             ui.hero_move(figure.hero, move_distance=2, valid_destinations=valid_vanish_destinations)
 
 def ranger_power_shot(figure, energy_spent, ui=None):
-    ui.hero_attack(figure.hero, physical_damage=5, elemental_damage=0, range=5, costs_attack_action=False)
+    ui.hero_attack(figure.hero, physical_damage=5, elemental_damage=0, range=5)
 
 def ranger_spirit_link(figure, energy_spent, ui=None):
     def spirit_link_callback(target):
@@ -154,7 +154,6 @@ def mage_fireball(figure, energy_spent, ui=None):
         physical_damage=0,
         elemental_damage=4,
         range=4,
-        costs_attack_action=False,
         after_attack_callback=mage_fireball_callback
     )
 

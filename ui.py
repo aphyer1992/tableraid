@@ -224,24 +224,24 @@ class GameUI:
 
                 # Determine background color priority:
                 # 1. Selection mode color (highest priority)
-                # 2. Special tile color (encounter paths)
-                # 3. Figure-specific color
+                # 2. Figure-specific color
+                # 3. Special tile color (encounter paths)
                 # 4. Default white
                 
                 if hasattr(self, 'select_mode') and self.select_mode and Coords(x, y) in self.valid_choices:    
                     bg_color = self.select_color
                     cmd = lambda _e, x=x, y=y: self.select_cmd(Coords(x, y))
                 else:
-                    # Check for special tiles first
+                    # Check for figure color first
                     bg_color = "white"
-                    for path in self.map.encounter.special_tiles.values():
-                        if Coords(x, y) in path["coords"]:
-                            bg_color = path["color"]
-                            break
-                    
-                    # If no special tile, check for figure color
-                    if bg_color == "white" and rep["background_color"]:
+                    if rep["background_color"]:
                         bg_color = rep["background_color"]
+                    else:
+                        # If no figure color, check for special tiles
+                        for path in self.map.encounter.special_tiles.values():
+                            if Coords(x, y) in path["coords"]:
+                                bg_color = path["color"]
+                                break
                     
                     cmd = None
 
