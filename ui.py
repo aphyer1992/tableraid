@@ -90,7 +90,7 @@ class GameUI:
             btn_activate = tk.Button(
                 top_row, text="Activate",
                 command=lambda h=hero: self.activate_hero(h),
-                state=tk.NORMAL if not hero.activated else tk.DISABLED,
+                state=tk.NORMAL if (not hero.activated and hero.can_activate) else tk.DISABLED,
                 width=8
             )
             btn_activate.pack(side=tk.LEFT, padx=1)
@@ -297,8 +297,11 @@ class GameUI:
         self.draw_everything()
 
     def activate_hero(self, hero):
-        hero.activate()
-        self.draw_hero_panel()
+        if hero.activate():  # activate() now returns True/False
+            self.draw_hero_panel()
+        else:
+            print(f"Failed to activate {hero.name}")
+            self.draw_hero_panel()  # Refresh to show disabled state
 
     def hero_basic_move_action(self, hero):
         # Consume the move action before initiating the move

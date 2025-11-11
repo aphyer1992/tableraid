@@ -15,6 +15,7 @@ class Hero:
         for ability in self.abilities:
             ability.hero = self
         self.activated = False
+        self.can_activate = True
         self.move_available = False
         self.attack_available = False
 
@@ -60,10 +61,14 @@ class Hero:
             ability.used = False
     
     def activate(self):
+        if not self.can_activate:
+            print(f'{self.name} cannot activate (disabled)')
+            return False
         print('ACTIVATING HERO:', self.name)
         self.current_energy -= self.map.heroes_activated
         self.activated = True
         self.map.heroes_activated += 1
         self.move_available = True
         self.attack_available = True
+        return True
             

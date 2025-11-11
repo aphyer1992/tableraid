@@ -9,6 +9,7 @@ import random
 def sael_biting_cold_listener(figure, roll, damage_type, map):
     counters = map.encounter.biting_cold_counters
     if damage_type == 'Elemental' and figure.figure_type == FigureType.HERO and roll <= counters:
+        print(f"{figure.name} is affected by Biting Cold!")
         figure.current_health -= 1
         figure.add_condition(Condition.SLOWED, 1)
 
@@ -85,6 +86,9 @@ def sael_frost_tomb(map, sael):
     target_hero.targeting_parameters[TargetingContext.ENEMY_TARGETABLE] = False
     target_hero.targeting_parameters[TargetingContext.AOE_ABILITY_HITTABLE] = False
     target_hero.add_condition(Condition.STUNNED, 99)
+    
+    # Disable the hero's ability to activate
+    target_hero.hero.can_activate = False
 
     def tomb_damage_listener():
         map.deal_damage(tomb, target_hero, physical_damage=0, elemental_damage=1)
@@ -96,13 +100,14 @@ def sael_frost_tomb(map, sael):
             target_hero.targeting_parameters[TargetingContext.AOE_ABILITY_HITTABLE] = True
             target_hero.remove_condition(Condition.STUNNED)
             
-            # Re-enable hero actions - needed due to how Stun currently works.
-            if target_hero.figure_type == FigureType.HERO:
-                target_hero.hero.move_available = True
-                target_hero.hero.attack_available = True
-                # Re-enable all abilities
-                for ability in target_hero.hero.abilities:
-                    ability.used = False
+            # Re-enable the hero's ability to activate, but don't give them actions until they do activate
+            target_hero.hero.can_activate = True
+            # Do NOT set move_available = True or attack_available = True here
+            # They get those when they activate
+            
+            # Re-enable all abilities
+            for ability in target_hero.hero.abilities:
+                ability.used = False
             
             # Deregister all tomb-related listeners
             map.events.deregister(GameEvent.HERO_TURN_START, hero_damage_listener_id)
