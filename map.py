@@ -20,6 +20,7 @@ class Map:
 
         self.encounter.setup_map(self)
         self.heroes_activated = 0
+        self.current_round = 1
         
         # the general condition handlers
         setup_condition_listeners(self)
@@ -346,3 +347,6 @@ class Map:
         for figure in self.get_figures_by_type([FigureType.BOSS, FigureType.MINION]):
             self.events.trigger(GameEvent.END_FIGURE_ACTION, figure=figure)
         self.events.trigger(GameEvent.BOSS_TURN_END)
+        
+        # Increment round counter at the end of boss turn
+        self.current_round += 1

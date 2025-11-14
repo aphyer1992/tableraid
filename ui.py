@@ -68,88 +68,143 @@ class GameUI:
         for widget in self.left_panel.winfo_children():
             widget.destroy()
 
+        # Add round number display at the top
+        round_frame = tk.Frame(self.left_panel, borderwidth=2, relief="ridge", padx=5, pady=3)
+        round_frame.pack(fill=tk.X, pady=(0, 5))
+        
+        round_label = tk.Label(round_frame, text=f"Round {self.map.current_round}", font=("Arial", 12, "bold"))
+        round_label.pack()
+
         hero_figures = self.map.get_figures_by_type(FigureType.HERO)
         for hero_figure in hero_figures:
             hero = hero_figure.hero
-            frame = tk.Frame(self.left_panel, borderwidth=2, relief="groove", padx=2, pady=2)
-            frame.pack(fill=tk.X, pady=4)
+            frame = tk.Frame(self.left_panel, borderwidth=2, relief="groove", padx=3, pady=3)
+            frame.pack(fill=tk.X, pady=2)
 
-            # Add hero name label
-            name_label = tk.Label(frame, text=hero.name, width=12, anchor="w")
+            # Hero info row (name, health, energy)
+            info_row = tk.Frame(frame)
+            info_row.pack(fill=tk.X)
+            
+            name_label = tk.Label(info_row, text=hero.name, width=10, anchor="w", font=("Arial", 9, "bold"))
             name_label.pack(side=tk.LEFT, padx=2)
-            # Add hero health label and
-            health_label = tk.Label(frame, text=f"HP {hero_figure.current_health}/{hero_figure.max_health}", width=6, anchor="w")
+            
+            health_label = tk.Label(info_row, text=f"HP {hero_figure.current_health}/{hero_figure.max_health}", width=7, anchor="center", font=("Arial", 8))
             health_label.pack(side=tk.LEFT, padx=2)
-            # Add hero energy label
-            energy_label = tk.Label(frame, text=f"Energy {hero.current_energy}", width=8, anchor="w")
+            
+            energy_label = tk.Label(info_row, text=f"E {hero.current_energy}", width=5, anchor="center", font=("Arial", 8))
             energy_label.pack(side=tk.LEFT, padx=2)
 
-            # Top row: Activate, Move, Attack
-            top_row = tk.Frame(frame)
-            top_row.pack(fill=tk.X)
-            btn_activate = tk.Button(
-                top_row, text="Activate",
+            # Action buttons row (Activate, Move, Attack)
+            action_row = tk.Frame(frame)
+            action_row.pack(fill=tk.X, pady=1)
+            
+            # Activate button with energy cost
+            activation_cost = self.map.heroes_activated  # 0-5 energy based on turn order
+            btn_activate = self.create_button_with_costs(
+                action_row, "Activate",
                 command=lambda h=hero: self.activate_hero(h),
                 state=tk.NORMAL if (not hero.activated and hero.can_activate) else tk.DISABLED,
-                width=8
+                width=7,
+                energy_cost=activation_cost
             )
-            btn_activate.pack(side=tk.LEFT, padx=1)
-            btn_move = tk.Button(
-                top_row, text="Move",
+            
+            # Move button with move cost indicator
+            btn_move = self.create_button_with_costs(
+                action_row, "Move",
                 command=lambda h=hero: self.hero_basic_move_action(h),
                 state=tk.NORMAL if hero.move_available else tk.DISABLED,
-                width=8
+                width=7,
+                move_cost=True
             )
-            btn_move.pack(side=tk.LEFT, padx=1)
-            btn_attack = tk.Button(
-                top_row, text="Attack",
+            
+            # Attack button with attack cost indicator
+            btn_attack = self.create_button_with_costs(
+                action_row, "Attack", 
                 command=lambda h=hero: self.hero_basic_attack_action(h),
                 state=tk.NORMAL if hero.attack_available else tk.DISABLED,
-                width=8
+                width=7,
+                attack_cost=True
             )
-            btn_attack.pack(side=tk.LEFT, padx=1)
 
-            # Bottom row: Abilities
-            bottom_row = tk.Frame(frame)
-            bottom_row.pack(fill=tk.X)
-
-            # ...inside your draw_hero_panel method, in the abilities loop...
-            for ability in hero.abilities:
-                frame_ability = tk.Frame(bottom_row)
-                # Add more horizontal padding between abilities
-                frame_ability.pack(side=tk.LEFT, padx=6)
+            # Abilities - split into multiple rows if needed
+            abilities_per_row = 2  # Limit abilities per row
+            ability_rows = []
+            current_row = None
+            
+            for i, ability in enumerate(hero.abilities):
+                if i % abilities_per_row == 0:
+                    current_row = tk.Frame(frame)
+                    current_row.pack(fill=tk.X, pady=1)
+                    ability_rows.append(current_row)
+                
+                frame_ability = tk.Frame(current_row)
+                frame_ability.pack(side=tk.LEFT, padx=2, fill=tk.X, expand=True)
 
                 if ability.variable_cost:
                     energy_var = tk.IntVar(value=1)
                     
                     if hero.current_energy > 0:
-                        spin = tk.Spinbox(frame_ability, from_=1, to=hero.current_energy, width=3, textvariable=energy_var)
+                        spin = tk.Spinbox(frame_ability, from_=1, to=hero.current_energy, width=2, textvariable=energy_var)
                     else:
                         # When no energy, create a disabled spinbox with 0 value
                         energy_var.set(0)
-                        spin = tk.Spinbox(frame_ability, from_=0, to=0, width=3, textvariable=energy_var, state=tk.DISABLED)
+                        spin = tk.Spinbox(frame_ability, from_=0, to=0, width=2, textvariable=energy_var, state=tk.DISABLED)
                     
-                    btn = tk.Button(
+                    btn = self.create_button_with_costs(
                         frame_ability,
-                        text=ability.name,
+                        ability.name,
                         command=lambda h=hero, a=ability, e=energy_var: self.use_ability(h, a, e.get()),
                         state=tk.NORMAL if ability.is_castable() else tk.DISABLED,
-                        width=12
+                        width=10,
+                        energy_cost="X",  # Variable cost shown as X
+                        move_cost=ability.move_cost,
+                        attack_cost=ability.attack_cost
                     )
-                    btn.pack(side=tk.LEFT)
-                    spin.pack(side=tk.LEFT)
+                    spin.pack(side=tk.LEFT, padx=1)
                 else:
-                    btn = tk.Button(
+                    btn = self.create_button_with_costs(
                         frame_ability,
-                        text=ability.name,
+                        ability.name,
                         command=lambda h=hero, a=ability: self.use_ability(h, a),
                         state=tk.NORMAL if ability.is_castable() else tk.DISABLED,
-                        width=12
+                        width=10,
+                        energy_cost=ability.energy_cost if ability.energy_cost > 0 else None,
+                        move_cost=ability.move_cost,
+                        attack_cost=ability.attack_cost
                     )
-                    btn.pack(side=tk.LEFT)
 
         self.end_round_button = tk.Button(self.left_panel, text="End Round", command=self.end_round)
         self.end_round_button.pack(side=tk.BOTTOM, pady=10)
+
+    def create_button_with_costs(self, parent, text, command, state, width=8, energy_cost=None, move_cost=False, attack_cost=False):
+        """Create a button with cost indicators in the text"""
+        # Build cost string
+        costs = []
+        if energy_cost is not None:
+            costs.append(str(energy_cost))
+        if move_cost:
+            costs.append("M")  # M for Move
+        if attack_cost:
+            costs.append("A")  # A for Attack
+        
+        # Format button text with costs
+        if costs:
+            cost_str = "".join(costs)
+            button_text = f"{text} ({cost_str})"
+        else:
+            button_text = text
+        
+        # Create the button with cost in text
+        btn = tk.Button(
+            parent,
+            text=button_text,
+            command=command,
+            state=state,
+            width=width + 4  # Make wider to accommodate cost text
+        )
+        btn.pack(side=tk.LEFT, padx=1)
+        
+        return btn
 
     def get_figure_representation(self, cell_contents):
         if not cell_contents:
@@ -206,7 +261,7 @@ class GameUI:
         }
 
     def draw_map(self):
-        # Clear previous
+        # Clear previous widgets
         for widget in self.map_panel.winfo_children():
             widget.destroy()
 
