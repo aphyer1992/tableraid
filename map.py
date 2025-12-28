@@ -201,7 +201,7 @@ class Map:
             return True
         return False
 
-    def bfs(self, start, impassible_types=None, max_distance=None, target=None, return_paths=False):
+    def bfs(self, start, impassible_types=None, max_distance=None, target=None, return_paths=False, tiebreaker_target=None):
         if impassible_types is None:
             impassible_types = set()
         visited = {}
@@ -224,6 +224,13 @@ class Map:
                     queue.append((neighbor, cost + 1))
                     if neighbor not in came_from:
                         came_from[neighbor] = current
+                    elif tiebreaker_target is not None:
+                        # Use pythagorean distance as tiebreaker
+                        current_parent = came_from[neighbor]
+                        current_dist = math.sqrt((current_parent.x - tiebreaker_target.x) ** 2 + (current_parent.y - tiebreaker_target.y) ** 2)
+                        new_dist = math.sqrt((current.x - tiebreaker_target.x) ** 2 + (current.y - tiebreaker_target.y) ** 2)
+                        if new_dist < current_dist:
+                            came_from[neighbor] = current
             for neighbor in self.get_diag_neighbors(current):
                 if (
                     neighbor not in visited
@@ -233,6 +240,13 @@ class Map:
                     queue.append((neighbor, cost + 1.5))
                     if neighbor not in came_from:
                         came_from[neighbor] = current
+                    elif tiebreaker_target is not None:
+                        # Use pythagorean distance as tiebreaker
+                        current_parent = came_from[neighbor]
+                        current_dist = math.sqrt((current_parent.x - tiebreaker_target.x) ** 2 + (current_parent.y - tiebreaker_target.y) ** 2)
+                        new_dist = math.sqrt((current.x - tiebreaker_target.x) ** 2 + (current.y - tiebreaker_target.y) ** 2)
+                        if new_dist < current_dist:
+                            came_from[neighbor] = current
         # Floor all costs to match D&D rounding
         costs = {coord: int(cost) for coord, cost in visited.items()}
         if return_paths:

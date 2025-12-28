@@ -1,6 +1,11 @@
 import random
+import math
 from figure import FigureType
 from game_targeting import TargetingContext
+
+def pythagorean_distance(pos1, pos2):
+    """Calculate straight-line pythagorean distance between two positions."""
+    return math.sqrt((pos1.x - pos2.x) ** 2 + (pos1.y - pos2.y) ** 2)
 
 def choose_target_hero(map, figure):
     closest_heroes = []
@@ -51,36 +56,50 @@ def make_enemy_move(game_map, enemy, player, move_range=None, impassible_types=N
         move_range = enemy.move
     if impassible_types is None:
         impassible_types = enemy.impassible_types
-    # Get all orthogonally adjacent squares to the player
-    preferred_targets = game_map.get_horver_neighbors(player.position)
-    other_targets = game_map.get_diag_neighbors(player.position)
-    # Find the closest preferred target
-    min_dist = float('inf')
-    best_square = None
-    for square in preferred_targets:
-        dist = game_map.distance_between(enemy.position, square, impassible_types)
-        if dist < min_dist:
-            min_dist = dist
-            best_square = square
     
-    for square in other_targets:
+    # Get all adjacent squares to the player
+    adjacent_squares = game_map.get_horver_neighbors(player.position) + game_map.get_diag_neighbors(player.position)
+    
+    # Find the closest square(s) by pathfinding distance
+    min_dist = float('inf')
+    best_candidates = []
+    
+    for square in adjacent_squares:
         dist = game_map.distance_between(enemy.position, square, impassible_types)
         if dist < min_dist:
             min_dist = dist
-            best_square = square
+            best_candidates = [square]
+        elif dist == min_dist:
+            best_candidates.append(square)
+    
+    # Tiebreak by pythagorean distance to player (naturally prefers orthogonal over diagonal)
+    best_square = min(best_candidates, key=lambda sq: pythagorean_distance(sq, player.position))
     
     print(f"Enemy AI: {enemy.name} at {enemy.position} moving towards {best_square} near player at {player.position}.")
 
-    path_costs, path_came_from = game_map.bfs(enemy.position, impassible_types, target=best_square, return_paths=True)
-    while path_costs[best_square] > move_range:
-        best_square = path_came_from[best_square]
+    # Use BFS with pythagorean distance tiebreaker to ensure predictable pathing
+    path_costs, path_came_from = game_map.bfs(
+        enemy.position, 
+        impassible_types, 
+        target=best_square, 
+        return_paths=True,
+        tiebreaker_target=player.position
+    )
     
-    print(f"Enemy AI: {enemy.name} will move to {best_square}.")
+    # Walk backwards from best_square to find the square we can reach with our movement
+    current = best_square
+    while path_costs[current] > move_range:
+        current = path_came_from[current]
+    
+    destination = current
+    print(f"Enemy AI: {enemy.name} will move to {destination}.")
 
+    # Build path from enemy position to destination
     path_to_walk = []
-    while best_square != enemy.position:
-        path_to_walk.append(best_square)
-        best_square = path_came_from[best_square]
+    current = destination
+    while current != enemy.position:
+        path_to_walk.append(current)
+        current = path_came_from[current]
     path_to_walk.reverse()  # reverse the path to walk from start to end
 
     for square in path_to_walk:
