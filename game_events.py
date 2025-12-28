@@ -35,7 +35,7 @@ class GameEvent(Enum):
     
     DEFENSE_ROLL = "defense_roll"
     """Triggered when a figure makes a defense roll.
-    Args: figure - the Figure making the roll, roll - the dice result, damage_type - 'Physical' or 'Elemental', damage_source - source of damage"""
+    Args: figure - the Figure making the roll, roll_data - dict with 'value' key that can be modified, damage_type - 'Physical' or 'Elemental', damage_source - source of damage"""
     
     HEALED = "healed"
     """Triggered when a figure is healed.

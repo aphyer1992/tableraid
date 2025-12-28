@@ -81,9 +81,10 @@ class Figure:
         else:
             raise ValueError("Invalid damage type")
         
-        roll = random.randint(1, 6)
+        roll_data = {"value": random.randint(1, 6)}
 
-        self.map.events.trigger(GameEvent.DEFENSE_ROLL, figure=self, roll=roll, damage_type=damage_type, damage_source=damage_source)
+        self.map.events.trigger(GameEvent.DEFENSE_ROLL, figure=self, roll_data=roll_data, damage_type=damage_type, damage_source=damage_source)
+        roll = roll_data["value"]
         print('Defense roll for {} against {} damage: {}'.format(self.name, damage_type, roll))
         if roll >= effective_def: # successful defense
             return True

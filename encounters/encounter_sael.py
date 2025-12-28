@@ -132,7 +132,7 @@ class EncounterSael(EncounterBase):
         # register the listener to track Biting Cold
         map.events.register(
             "defense_roll", 
-            lambda figure, roll, damage_type, **kwargs: sael_biting_cold_listener(figure, roll, damage_type, map)
+            lambda figure, roll_data, damage_type, **kwargs: sael_biting_cold_listener(figure, roll_data, damage_type, map)
         )
 
         blizzard = Figure("Blizzard", FigureType.MARKER, fixed_representation='Z')

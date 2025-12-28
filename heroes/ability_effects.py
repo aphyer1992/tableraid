@@ -164,22 +164,25 @@ def mage_fire_nova(figure, energy_spent, ui=None):
         # this jumps directly to the execute_attack because no target selection is needed.
         ui.execute_attack(figure, target, physical_damage=0, elemental_damage=energy_spent)
 
-def mage_combustion_listener(mage_hero, figure, roll, damage_type, damage_source):
+def mage_combustion_listener(mage_hero, figure, roll_data, damage_type, damage_source):
+    """Modify defense roll for burning targets - reduce roll by 1 on exact defense match, grant bonus on critical success"""
     if damage_source != mage_hero.figure:
         return
     if damage_type == 'Elemental' and figure.get_condition(Condition.BURN) is not None:
+        roll = roll_data["value"]
         if roll == 1:
             print('Mage Combustion triggered for bonus HP and Energy!')
             mage_hero.figure.heal(1, source=mage_hero.figure)
             mage_hero.gain_energy(1)
-        elif roll == figure.elemental_def: # if you just barely missed
+        elif roll == figure.elemental_def:  # if you just barely missed
+            # Reduce the roll by 1 so it fails the defense
+            roll_data["value"] = roll - 1
             print('Mage Combustion triggered for extra damage!')
-            figure.lose_health(1, source=mage_hero.figure)
 
 def mage_combustion_setup(hero):
     hero.figure.map.events.register(
-        "defense_roll", 
-        lambda figure, roll, damage_type, damage_source: mage_combustion_listener(hero, figure, roll, damage_type, damage_source)
+        GameEvent.DEFENSE_ROLL, 
+        lambda figure, roll_data, damage_type, damage_source: mage_combustion_listener(hero, figure, roll_data, damage_type, damage_source)
     )
     return
 

@@ -6,8 +6,9 @@ from game_conditions import Condition
 from game_targeting import TargetingContext
 import random
 
-def sael_biting_cold_listener(figure, roll, damage_type, map):
+def sael_biting_cold_listener(figure, roll_data, damage_type, map):
     counters = map.encounter.biting_cold_counters
+    roll = roll_data["value"]
     if damage_type == 'Elemental' and figure.figure_type == FigureType.HERO and roll <= counters:
         print(f"{figure.name} is affected by Biting Cold!")
         figure.current_health -= 1
