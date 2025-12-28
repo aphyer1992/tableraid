@@ -1,5 +1,5 @@
 from encounters.encounter_base import EncounterBase
-from encounters.card_effects import (
+from encounters.card_effects_sael import (
     sael_avalanche_crush,
     sael_storm_shield,
     sael_chilling_winds,
