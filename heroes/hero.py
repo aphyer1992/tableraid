@@ -32,20 +32,44 @@ class Hero:
         self.current_energy -= amount
 
     def get_valid_move_destinations(self, distance):
-        squares = self.map.get_squares_within_distance(self.figure.position, distance, impassible_types=self.figure.impassible_types)
+        """
+        Get valid move destinations with optimal path information.
+        
+        Returns:
+            dict mapping Coords to path info:
+            {
+                coords: {
+                    'move_cost': int,
+                    'hazard_damage': int,
+                    'path': [Coords]
+                }
+            }
+        """
+        # Use hazard-aware BFS to get all reachable squares with path info
+        path_info = self.map.bfs_with_hazards(
+            self.figure.position, 
+            impassible_types=self.figure.impassible_types,
+            max_distance=distance,
+            figure=self.figure
+        )
+        
         # Filter out squares that contain blocking figures (but allow markers)
-        destinations = []
-        for s in squares:
-            square_contents = self.map.get_square_contents(s)
-            # Allow empty squares or squares containing only markers
+        valid_destinations = {}
+        for coords, info in path_info.items():
+            square_contents = self.map.get_square_contents(coords)
             blocking_figures = [f for f in square_contents if f.figure_type != FigureType.MARKER]
             if not blocking_figures:
-                destinations.append(s)
+                valid_destinations[coords] = info
         
         # Always allow staying in current position (no move)
-        if self.figure.position not in destinations:
-            destinations.append(self.figure.position)
-        return destinations
+        if self.figure.position not in valid_destinations:
+            valid_destinations[self.figure.position] = {
+                'move_cost': 0,
+                'hazard_damage': 0,
+                'path': [self.figure.position]
+            }
+        
+        return valid_destinations
 
     def get_valid_attack_targets(self, range):
         figures = self.map.get_figures_within_distance(self.figure.position, range)

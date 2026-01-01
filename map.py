@@ -66,6 +66,8 @@ class Map:
                     raise ValueError("No empty square found to displace the figure")
                 self.move_figure(existing_figure, nearest_empty)
             elif on_occupied == 'replace':
+                assert(len(blocking) == 1), "There should be at most one blocking figure in a square"
+                existing_figure = blocking[0]
                 self.remove_figure(existing_figure)
             elif on_occupied == 'find_empty':
                 nearest_empty = self.nearest_empty_square(coords)
@@ -99,10 +101,50 @@ class Map:
         self.figures.remove(figure)
         self.events.trigger(GameEvent.FIGURE_REMOVED, figure=figure, coords=Coords(x=coords.x, y=coords.y))
 
-    def move_figure(self, figure, coords):
+    def move_figure(self, figure, coords, path=None):
+        """
+        Move a figure to new coordinates, optionally along a specified path.
+        
+        Args:
+            figure: The figure to move
+            coords: Destination coordinates
+            path: Optional list of coordinates representing the path (includes start and end)
+                  If provided, figure will take hazard damage along the path
+        """
         if figure not in self.figures:
             raise ValueError("Figure not found on the map")
         old_coords = self.positions[figure]
+        
+        # DEBUG: Print path info
+        print(f"DEBUG: move_figure called for {figure.name} from {old_coords} to {coords}, path={path}")
+        
+        # If a path is provided, apply hazard damage
+        if path is not None:
+            total_hazard_damage = 0
+            # Skip the starting position, check damage on all squares moved through
+            for step in path[1:]:
+                hazard_damage = self._get_hazard_damage(step, figure)
+                print(f"DEBUG: Checking hazard at {step}: {hazard_damage}")
+                if hazard_damage > 0:
+                    total_hazard_damage += hazard_damage
+            
+            # Apply accumulated hazard damage as elemental damage with defense rolls
+            if total_hazard_damage > 0:
+                # Use a generic hazard source (first hazard figure found, or None)
+                hazard_source = None
+                for step in path[1:]:
+                    for fig in self.cell_contents[step.y][step.x]:
+                        if fig.hazard_damage > 0:
+                            hazard_source = fig
+                            break
+                    if hazard_source:
+                        break
+                
+                damage_dealt = self.deal_damage(hazard_source, figure, physical_damage=0, elemental_damage=total_hazard_damage)
+                if damage_dealt > 0:
+                    print(f"{figure.name} takes {damage_dealt} elemental damage from hazards!")
+        
+        # Execute the movement
         self.cell_contents[old_coords.y][old_coords.x].remove(figure)
         self.cell_contents[coords.y][coords.x].append(figure)
         self.positions[figure] = coords
@@ -206,7 +248,7 @@ class Map:
             impassible_types = set()
         visited = {}
         came_from = {}
-        queue = [(start, 0)]
+        queue = [(start, 0.0)]
         while queue:
             current, cost = queue.pop(0)
             if current in visited:
@@ -253,6 +295,93 @@ class Map:
             return costs, came_from
         return costs
 
+    def bfs_with_hazards(self, start, impassible_types=None, max_distance=None, figure=None):
+        """
+        Enhanced BFS that tracks optimal paths considering both movement cost and hazard damage.
+        
+        Args:
+            start: Starting coordinates
+            impassible_types: Set of FigureTypes that block movement
+            max_distance: Maximum movement distance
+            figure: The figure moving (used to determine hazard damage)
+            
+        Returns:
+            dict mapping each reachable coord to:
+            {
+                'move_cost': int,        # Movement points needed
+                'hazard_damage': int,    # Elemental damage from hazards (e.g., lava)
+                'path': [Coords],        # List of coordinates from start to destination (inclusive)
+            }
+        """
+        if impassible_types is None:
+            impassible_types = set()
+        
+        # Track best path to each square: (move_cost, hazard_damage, path)
+        best_paths = {}
+        
+        # Priority queue: (hazard_damage, move_cost, counter, current_pos, path)
+        # Prioritize by hazard_damage first (minimize), then move_cost (minimize)
+        # counter is used as tiebreaker to avoid comparing Coords objects
+        import heapq
+        counter = 0
+        queue = [(0, 0.0, counter, start, [start])]
+        
+        while queue:
+            current_hazard, current_cost, _, current, path = heapq.heappop(queue)
+            
+            # Skip if we've already found a better path to this square
+            if current in best_paths:
+                existing = best_paths[current]
+                # Better = less hazard damage, or same hazard but less movement
+                if (existing['hazard_damage'] < current_hazard or 
+                    (existing['hazard_damage'] == current_hazard and existing['move_cost'] <= current_cost)):
+                    continue
+            
+            # Skip if this destination exceeds max distance
+            if max_distance is not None and current_cost > max_distance:
+                continue
+            
+            # Record this path
+            best_paths[current] = {
+                'move_cost': int(current_cost),
+                'hazard_damage': current_hazard,
+                'path': path.copy()
+            }
+            
+            # Don't expand further if we've hit max distance
+            if max_distance is not None and current_cost >= max_distance:
+                continue
+            
+            # Explore neighbors
+            for neighbor in self.get_horver_neighbors(current):
+                if not any(fig.figure_type in impassible_types for fig in self.cell_contents[neighbor.y][neighbor.x]):
+                    new_cost = current_cost + 1
+                    new_hazard = current_hazard + self._get_hazard_damage(neighbor, figure)
+                    new_path = path + [neighbor]
+                    counter += 1
+                    heapq.heappush(queue, (new_hazard, new_cost, counter, neighbor, new_path))
+            
+            for neighbor in self.get_diag_neighbors(current):
+                if (self.can_move_diagonal(current, neighbor, impassible_types) and
+                    not any(fig.figure_type in impassible_types for fig in self.cell_contents[neighbor.y][neighbor.x])):
+                    new_cost = current_cost + 1.5
+                    new_hazard = current_hazard + self._get_hazard_damage(neighbor, figure)
+                    new_path = path + [neighbor]
+                    counter += 1
+                    heapq.heappush(queue, (new_hazard, new_cost, counter, neighbor, new_path))
+        
+        return best_paths
+    
+    def _get_hazard_damage(self, coords, figure):
+        """
+        Calculate hazard damage for a figure moving into a square.
+        Checks all figures in the square for their hazard_damage property.
+        """
+        total_damage = 0
+        for fig in self.cell_contents[coords.y][coords.x]:
+            total_damage += fig.hazard_damage
+        return total_damage
+
     def squares_within_distance(self, pos1, impassible_types, distance):
         return set(self.bfs(pos1, impassible_types, max_distance=distance).keys())
 
@@ -278,6 +407,122 @@ class Map:
     def distance_between(self, pos1, pos2, impassible_types=None):
         visited = self.bfs(pos1, impassible_types, target=pos2)
         return visited.get(pos2, float('inf'))
+    
+    def move_away_squares(self, fleeing_figure, threat_figure):
+        """
+        Returns all squares where fleeing_figure can move while fleeing from threat_figure.
+        
+        Fleeing logic: You can flee along any horizontal/vertical/diagonal direction within 
+        45 degrees of 'directly away from the threat'. This gives 2-3 valid directions 
+        depending on whether you're on a cardinal/diagonal line or not.
+        
+        Args:
+            fleeing_figure: The figure trying to flee
+            threat_figure: The figure being fled from
+            
+        Returns:
+            dict mapping Coords to path info (same format as bfs_with_hazards):
+            {
+                coords: {
+                    'move_cost': int,
+                    'hazard_damage': int,
+                    'path': [Coords]
+                }
+            }
+        """
+        flee_pos = fleeing_figure.position
+        threat_pos = threat_figure.position
+        
+        # Calculate direction vector from threat to fleeing figure
+        dx = flee_pos.x - threat_pos.x
+        dy = flee_pos.y - threat_pos.y
+        
+        if dx == 0 and dy == 0:
+            return {}  # Can't flee if on same square
+        
+        # The 8 possible movement directions (dx, dy)
+        directions = [
+            (1, 0),   # E
+            (1, 1),   # NE
+            (0, 1),   # N
+            (-1, 1),  # NW
+            (-1, 0),  # W
+            (-1, -1), # SW
+            (0, -1),  # S
+            (1, -1)   # SE
+        ]
+        
+        # Calculate which directions are valid for fleeing
+        valid_directions = []
+        for dir_dx, dir_dy in directions:
+            dot_product = dir_dx * dx + dir_dy * dy
+            
+            if dot_product > 0:
+                away_magnitude = math.sqrt(dx*dx + dy*dy)
+                dir_magnitude = math.sqrt(dir_dx*dir_dx + dir_dy*dir_dy)
+                cos_angle = dot_product / (away_magnitude * dir_magnitude)
+                
+                # cos(45°) ≈ 0.707, so accept directions within 45 degrees
+                if cos_angle >= 0.707:
+                    valid_directions.append((dir_dx, dir_dy))
+        
+        # Use hazard-aware BFS but only allow movement in valid flee directions
+        max_move = fleeing_figure.move
+        best_paths = {}
+        
+        import heapq
+        counter = 0
+        queue = [(0, 0.0, counter, flee_pos, [flee_pos])]
+        
+        while queue:
+            current_hazard, current_cost, _, current, path = heapq.heappop(queue)
+            
+            # Skip if we've already found a better path to this square
+            if current in best_paths:
+                existing = best_paths[current]
+                if (existing['hazard_damage'] < current_hazard or 
+                    (existing['hazard_damage'] == current_hazard and existing['move_cost'] <= current_cost)):
+                    continue
+            
+            # Record this path
+            best_paths[current] = {
+                'move_cost': int(current_cost),
+                'hazard_damage': current_hazard,
+                'path': path.copy()
+            }
+            
+            # Don't expand if we've hit max distance
+            if current_cost >= max_move:
+                continue
+            
+            # Only explore neighbors in valid flee directions
+            for dir_dx, dir_dy in valid_directions:
+                neighbor = Coords(current.x + dir_dx, current.y + dir_dy)
+                
+                if not self.coords_in_bounds(neighbor):
+                    continue
+                
+                # Check if passable
+                blocking = [f for f in self.cell_contents[neighbor.y][neighbor.x] 
+                           if f.figure_type != FigureType.MARKER]
+                if blocking:
+                    continue
+                
+                # Calculate movement cost (diagonal vs orthogonal)
+                is_diagonal = (dir_dx != 0 and dir_dy != 0)
+                move_cost = 1.5 if is_diagonal else 1.0
+                
+                new_cost = current_cost + move_cost
+                new_hazard = current_hazard + self._get_hazard_damage(neighbor, fleeing_figure)
+                new_path = path + [neighbor]
+                counter += 1
+                heapq.heappush(queue, (new_hazard, new_cost, counter, neighbor, new_path))
+        
+        # Remove starting position from results
+        if flee_pos in best_paths:
+            del best_paths[flee_pos]
+        
+        return best_paths
     
     def knock_back(self, figure, knockback_origin, knockback_distance):
         # Determine direction vector (dx, dy)

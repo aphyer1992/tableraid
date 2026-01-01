@@ -7,6 +7,16 @@ class EncounterBase:
         """Returns the unique identifier for the encounter."""
         return self.name
     
+    def get_boss_display_info(self):
+        """
+        Returns a list of display items for the boss panel.
+        Each item is a dict with 'name' and 'text' keys.
+        Default implementation shows only the next card.
+        """
+        if hasattr(self, 'next_card'):
+            return [self.next_card]
+        return []
+    
     def get_deployment_zone(self):
         assert(False), "EncounterBase.get_deployment_zone() must be overridden in the subclass"
 

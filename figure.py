@@ -12,7 +12,7 @@ class FigureType(Enum):
 
 
 class Figure:
-    def __init__(self, name, figure_type, health=None, physical_def=0, elemental_def=0, move=0, physical_dmg=0, elemental_dmg=0, attack_range=1, fixed_representation=None, cell_color=None):
+    def __init__(self, name, figure_type, health=None, physical_def=0, elemental_def=0, move=0, physical_dmg=0, elemental_dmg=0, attack_range=1, fixed_representation=None, cell_color=None, hazard_damage=0):
         self.name = name
         self.figure_type = figure_type
         self.max_health = health if health is not None else 1
@@ -23,6 +23,7 @@ class Figure:
         self.physical_dmg = physical_dmg
         self.elemental_dmg = elemental_dmg
         self.attack_range = attack_range
+        self.hazard_damage = hazard_damage  # Elemental damage taken when moving through this square
         self.impassible_types = [FigureType.OBSTACLE]
         if self.figure_type in [FigureType.BOSS, FigureType.MINION]:
             self.impassible_types.append(FigureType.HERO)

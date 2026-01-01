@@ -3,6 +3,7 @@ from figure import FigureType
 from coords import Coords
 from effects_display import EFFECTS_DISPLAY
 from game_targeting import TargetingContext
+from game_state_snapshot import GameStateSnapshot
 
 class GameUI:
     def __init__(self, map, heroes):
@@ -28,6 +29,8 @@ class GameUI:
         self.select_color = None
         self.select_cmd = None
         self.end_round_button = None
+        self.restart_round_button = None
+        self.round_snapshot = None  # Stores state at start of round for restart
 
         self.setup_placement()
         self.draw_everything()
@@ -60,6 +63,8 @@ class GameUI:
         else:
             self.select_mode = None
             self.placement_label.destroy()
+            # Create initial snapshot at start of round 1
+            self.round_snapshot = GameStateSnapshot(self.map)
             self.draw_hero_panel()
             self.draw_map()
 
@@ -173,8 +178,15 @@ class GameUI:
                         attack_cost=ability.attack_cost
                     )
 
-        self.end_round_button = tk.Button(self.left_panel, text="End Round", command=self.end_round)
-        self.end_round_button.pack(side=tk.BOTTOM, pady=10)
+        # Bottom button panel
+        button_panel = tk.Frame(self.left_panel)
+        button_panel.pack(side=tk.BOTTOM, pady=10)
+        
+        self.restart_round_button = tk.Button(button_panel, text="Restart Round", command=self.restart_round)
+        self.restart_round_button.pack(side=tk.LEFT, padx=5)
+        
+        self.end_round_button = tk.Button(button_panel, text="End Round", command=self.end_round)
+        self.end_round_button.pack(side=tk.LEFT, padx=5)
 
     def create_button_with_costs(self, parent, text, command, state, width=8, energy_cost=None, move_cost=False, attack_cost=False):
         """Create a button with cost indicators in the text"""
@@ -277,31 +289,54 @@ class GameUI:
                 else:
                     rep = {"center": " ", "right_effects": [], "left_effects": [], "background_color": None}
 
-                # Determine background color priority:
-                # 1. Selection mode color (highest priority)
-                # 2. Figure-specific color
-                # 3. Special tile color (encounter paths)
-                # 4. Default white
+                # Collect all background colors for this cell
+                bg_colors = []
                 
+                # Check for selection mode color (highest priority)
                 if hasattr(self, 'select_mode') and self.select_mode and Coords(x, y) in self.valid_choices:    
-                    bg_color = self.select_color
+                    assert self.select_cmd is not None, "select_cmd must be set when in select_mode"
+                    bg_colors.append(self.select_color)
                     cmd = lambda _e, x=x, y=y: self.select_cmd(Coords(x, y))
                 else:
-                    # Check for figure color first
-                    bg_color = "white"
-                    if rep["background_color"]:
-                        bg_color = rep["background_color"]
-                    else:
-                        # If no figure color, check for special tiles
-                        for path in self.map.encounter.special_tiles.values():
-                            if Coords(x, y) in path["coords"]:
-                                bg_color = path["color"]
-                                break
-                    
                     cmd = None
+                
+                # Check for figure-specific color
+                if rep["background_color"]:
+                    bg_colors.append(rep["background_color"])
+                
+                # Check for special tiles with different colors
+                if 'special_tiles' in self.map.encounter.__dict__:
+                    for path in self.map.encounter.special_tiles.values():
+                        if Coords(x, y) in path["coords"]:
+                            bg_colors.append(path["color"])
+                            break
+                
+                # Default white if no colors
+                if not bg_colors:
+                    bg_colors.append("white")
+                
+                # Create cell with potentially multiple background colors
+                if len(bg_colors) == 1:
+                    # Single color - use simple frame
+                    cell_frame = tk.Frame(self.map_panel, width=65, height=65, bg=bg_colors[0], borderwidth=1, relief="solid")
+                    cell_frame.grid_propagate(False)
+                    bg_color = bg_colors[0]
+                else:
+                    # Multiple colors - use canvas with diagonal stripes
+                    cell_frame = tk.Canvas(self.map_panel, width=65, height=65, borderwidth=1, relief="solid", highlightthickness=0)
+                    cell_frame.grid_propagate(False)
+                    
+                    # Draw vertical stripes (8 total, alternating between colors)
+                    stripe_width = 65 / 8
+                    for i in range(8):
+                        color = bg_colors[i % len(bg_colors)]
+                        x1 = int(i * stripe_width)
+                        x2 = int((i + 1) * stripe_width)
+                        cell_frame.create_rectangle(x1, 0, x2, 65, fill=color, outline="")
+                    
+                    bg_color = bg_colors[0]  # Use first color for text background
 
-                cell_frame = tk.Frame(self.map_panel, width=65, height=65, bg=bg_color, borderwidth=1, relief="solid")
-                cell_frame.grid_propagate(False)  # Prevent resizing to fit contents
+                cell_frame.grid(row=y, column=x)
 
                 # Center: main figure info
                 center_label = tk.Label(cell_frame, text=rep["center"], bg=bg_color)
@@ -317,27 +352,30 @@ class GameUI:
                     eff_label = tk.Label(cell_frame, text=eff['text'], fg=eff['color'], font=("Arial", 7), bg=bg_color)
                     eff_label.place(relx=0.0, rely=1.0 - i*0.18, anchor="sw")
 
+                # Bind click events
                 if cmd is not None:
                     cell_frame.bind("<Button-1>", cmd)
                     center_label.bind("<Button-1>", cmd)
-                    # Optionally bind effect labels too
-
-                cell_frame.grid(row=y, column=x)
 
                 
     def draw_boss_window(self):
-        # Clear previous card
+        # Clear previous content
         for widget in self.right_panel.winfo_children():
             widget.destroy()
 
-        card_frame = tk.Frame(self.right_panel, bg="#f8f4e3", bd=3, relief="ridge", padx=10, pady=10)
-        card_frame.pack(pady=30, padx=20, fill=tk.BOTH, expand=True)
+        # Get display items from encounter
+        display_items = self.map.encounter.get_boss_display_info()
+        
+        # Create a frame for each display item
+        for item in display_items:
+            card_frame = tk.Frame(self.right_panel, bg="#f8f4e3", bd=3, relief="ridge", padx=10, pady=10)
+            card_frame.pack(pady=10, padx=20, fill=tk.BOTH)
 
-        name_label = tk.Label(card_frame, text=self.map.encounter.next_card['name'], font=("Arial", 16, "bold"), bg="#f8f4e3")
-        name_label.pack(pady=(0, 10))
+            name_label = tk.Label(card_frame, text=item['name'], font=("Arial", 14, "bold"), bg="#f8f4e3")
+            name_label.pack(pady=(0, 10))
 
-        text_label = tk.Label(card_frame, text=self.map.encounter.next_card['text'], font=("Arial", 12), wraplength=160, justify="left", bg="#f8f4e3")
-        text_label.pack()
+            text_label = tk.Label(card_frame, text=item['text'], font=("Arial", 11), wraplength=160, justify="left", bg="#f8f4e3")
+            text_label.pack()
     
     def draw_everything(self):
         self.draw_hero_panel()
@@ -348,8 +386,27 @@ class GameUI:
         self.map.end_hero_turn()
         self.map.execute_boss_turn()
         self.map.begin_hero_turn()
+        # Create snapshot at start of new round
+        self.round_snapshot = GameStateSnapshot(self.map)
         # Reset UI for new hero turn
         self.draw_everything()
+    
+    def restart_round(self):
+        """Restart the current round from the beginning."""
+        if self.round_snapshot is None:
+            print("No snapshot available - cannot restart round")
+            return
+        
+        # Restore the game state
+        self.round_snapshot.restore(self.map)
+        
+        # Reset any active selection mode
+        self.select_mode = None
+        self.valid_choices = []
+        
+        # Refresh the UI to reflect restored state
+        self.draw_everything()
+        print(f"Round {self.map.current_round} restarted")
 
     def activate_hero(self, hero):
         if hero.activate():  # activate() now returns True/False
@@ -370,9 +427,18 @@ class GameUI:
         
         # Use custom destinations if provided, otherwise calculate normal movement
         if valid_destinations is not None:
-            self.valid_choices = valid_destinations
+            # Handle legacy list format (convert to dict)
+            if isinstance(valid_destinations, list):
+                self.valid_choices = valid_destinations
+                self.move_paths = None
+            else:
+                # New dict format with path info
+                self.valid_choices = list(valid_destinations.keys())
+                self.move_paths = valid_destinations
         else:
-            self.valid_choices = hero.get_valid_move_destinations(move_distance)
+            move_info = hero.get_valid_move_destinations(move_distance)
+            self.valid_choices = list(move_info.keys())
+            self.move_paths = move_info
         
         self.select_color = "lightgreen"
         self.select_cmd = lambda coords: self.execute_move(hero, coords)
@@ -381,8 +447,15 @@ class GameUI:
     def execute_move(self, hero, coords):
         # Only move if the destination is different from current position
         if coords != hero.figure.position:
-            self.map.move_figure(hero.figure, coords)
+            # Use path information if available
+            if hasattr(self, 'move_paths') and self.move_paths and coords in self.move_paths:
+                path = self.move_paths[coords]['path']
+                self.map.move_figure(hero.figure, coords, path=path)
+            else:
+                # Legacy path-less movement
+                self.map.move_figure(hero.figure, coords)
         self.select_mode = None
+        self.move_paths = None
         self.draw_map()
         self.draw_hero_panel()
 
