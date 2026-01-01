@@ -120,6 +120,9 @@ def como_visage(map):
     como = map.get_figures_by_type(FigureType.BOSS)[0]
     como_basic_action(map, como, map.encounter)
     
+    # Mark that we need to aim meteor after fleeing completes
+    map.visage_needs_meteor_aim = True
+    
     # Get all heroes and sort by distance from Comorragh (furthest first)
     heroes = map.get_figures_by_type(FigureType.HERO, {TargetingContext.ENEMY_TARGETABLE: True})
     heroes_with_distance = [(hero, map.distance_between(hero.position, como.position)) for hero in heroes]
@@ -176,6 +179,11 @@ def como_visage_process_next_flee(map):
         # Queue is empty, cleanup and continue
         if hasattr(map, 'visage_flee_queue'):
             delattr(map, 'visage_flee_queue')
+        
+        # Now that all heroes have fled, aim the meteor at their new positions
+        if hasattr(map, 'visage_needs_meteor_aim') and map.visage_needs_meteor_aim:
+            como_aim_meteor(map, map.encounter)
+            map.visage_needs_meteor_aim = False
         return
     
     # Get next hero to flee
@@ -208,6 +216,7 @@ def como_visage_process_next_flee(map):
     ui.select_mode = 'visage_flee'
     ui.valid_choices = list(valid_destinations.keys())
     ui.move_paths = valid_destinations  # Store path info for potential display
+    ui.select_message = f"Visage of Terror: {hero_figure.hero.name} must flee 3 spaces from Comorragh or take 3 damage"
     ui.select_color = "lightgreen"
     ui.select_cmd = flee_move_callback
     ui.draw_map()

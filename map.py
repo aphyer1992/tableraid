@@ -227,6 +227,7 @@ class Map:
         return neighbors
 
     def can_move_diagonal(self, from_coords, to_coords, impassible_types):
+        """Check if diagonal movement is allowed and return (allowed, extra_hazard_damage)"""
         dx = to_coords.x - from_coords.x
         dy = to_coords.y - from_coords.y
         
@@ -236,12 +237,24 @@ class Map:
         adj1 = Coords(to_coords.x, from_coords.y)
         adj2 = Coords(from_coords.x, to_coords.y)
         
-        # Check if at least one adjacent square is passable
-        if not any(figure.figure_type in impassible_types for figure in self.cell_contents[adj1.y][adj1.x]):
-            return True
-        if not any(figure.figure_type in impassible_types for figure in self.cell_contents[adj2.y][adj2.x]):
-            return True
-        return False
+        # Check both adjacent squares
+        adj1_blocked = any(figure.figure_type in impassible_types for figure in self.cell_contents[adj1.y][adj1.x])
+        adj2_blocked = any(figure.figure_type in impassible_types for figure in self.cell_contents[adj2.y][adj2.x])
+        
+        # If both squares are blocked, cannot move diagonally
+        if adj1_blocked and adj2_blocked:
+            return False, 0
+        
+        # If at least one is passable, can move
+        # But if crossing through hazards, take the damage from whichever is lower
+        adj1_hazard = 999999 if adj1_blocked else 0
+        for fig in self.cell_contents[adj1.y][adj1.x]:
+            adj1_hazard += fig.hazard_damage
+        adj2_hazard = 999999 if adj2_blocked else 0
+        for fig in self.cell_contents[adj2.y][adj2.x]:
+            adj2_hazard += fig.hazard_damage
+        
+        return True, min(adj1_hazard, adj2_hazard)  # Take the lesser hazard damage of the two
 
     def bfs(self, start, impassible_types=None, max_distance=None, target=None, return_paths=False, tiebreaker_target=None):
         if impassible_types is None:
@@ -274,9 +287,10 @@ class Map:
                         if new_dist < current_dist:
                             came_from[neighbor] = current
             for neighbor in self.get_diag_neighbors(current):
+                can_move, _ = self.can_move_diagonal(current, neighbor, impassible_types)
                 if (
                     neighbor not in visited
-                    and self.can_move_diagonal(current, neighbor, impassible_types)
+                    and can_move
                     and (neighbor == target or not any(figure.figure_type in impassible_types for figure in self.cell_contents[neighbor.y][neighbor.x]))
                 ):
                     queue.append((neighbor, cost + 1.5))
@@ -298,6 +312,7 @@ class Map:
     def bfs_with_hazards(self, start, impassible_types=None, max_distance=None, figure=None):
         """
         Enhanced BFS that tracks optimal paths considering both movement cost and hazard damage.
+        Uses D&D movement rules: diagonal moves alternate between costing 1 and 2 move points.
         
         Args:
             start: Starting coordinates
@@ -316,59 +331,87 @@ class Map:
         if impassible_types is None:
             impassible_types = set()
         
-        # Track best path to each square: (move_cost, hazard_damage, path)
-        best_paths = {}
+        # Track ALL Pareto-optimal paths to each square
+        # Each square maps to a list of non-dominated (move_cost, hazard_damage, path) tuples
+        pareto_paths = {}  # coord -> [(cost, hazard, path), ...]
         
-        # Priority queue: (hazard_damage, move_cost, counter, current_pos, path)
-        # Prioritize by hazard_damage first (minimize), then move_cost (minimize)
-        # counter is used as tiebreaker to avoid comparing Coords objects
+        # Priority queue: (hazard_damage, move_cost, counter, current_pos, path, next_diag_expensive)
         import heapq
         counter = 0
-        queue = [(0, 0.0, counter, start, [start])]
+        queue = [(0, 0, counter, start, [start], False)]
         
         while queue:
-            current_hazard, current_cost, _, current, path = heapq.heappop(queue)
-            
-            # Skip if we've already found a better path to this square
-            if current in best_paths:
-                existing = best_paths[current]
-                # Better = less hazard damage, or same hazard but less movement
-                if (existing['hazard_damage'] < current_hazard or 
-                    (existing['hazard_damage'] == current_hazard and existing['move_cost'] <= current_cost)):
-                    continue
+            current_hazard, current_cost, _, current, path, next_diag_expensive = heapq.heappop(queue)
             
             # Skip if this destination exceeds max distance
             if max_distance is not None and current_cost > max_distance:
                 continue
             
-            # Record this path
-            best_paths[current] = {
-                'move_cost': int(current_cost),
-                'hazard_damage': current_hazard,
-                'path': path.copy()
-            }
+            # Check if this path is dominated by existing paths to this square
+            if current in pareto_paths:
+                # Skip if any existing path is strictly better in both metrics
+                dominated = False
+                for existing_cost, existing_hazard, _ in pareto_paths[current]:
+                    if existing_cost <= current_cost and existing_hazard <= current_hazard:
+                        # This path is dominated, skip it
+                        dominated = True
+                        break
+                if dominated:
+                    continue
+                
+                # Remove any existing paths that this path dominates
+                pareto_paths[current] = [
+                    (c, h, p) for c, h, p in pareto_paths[current]
+                    if not (current_cost <= c and current_hazard <= h)
+                ]
+            else:
+                pareto_paths[current] = []
+            
+            # Add this path to the Pareto set
+            pareto_paths[current].append((current_cost, current_hazard, path.copy()))
             
             # Don't expand further if we've hit max distance
             if max_distance is not None and current_cost >= max_distance:
                 continue
             
-            # Explore neighbors
+            # Explore horizontal/vertical neighbors (always cost 1, don't affect diagonal counter)
             for neighbor in self.get_horver_neighbors(current):
                 if not any(fig.figure_type in impassible_types for fig in self.cell_contents[neighbor.y][neighbor.x]):
                     new_cost = current_cost + 1
                     new_hazard = current_hazard + self._get_hazard_damage(neighbor, figure)
                     new_path = path + [neighbor]
                     counter += 1
-                    heapq.heappush(queue, (new_hazard, new_cost, counter, neighbor, new_path))
+                    # Horizontal/vertical moves don't change the diagonal cost alternation
+                    heapq.heappush(queue, (new_hazard, new_cost, counter, neighbor, new_path, next_diag_expensive))
             
+            # Explore diagonal neighbors (alternate between cost 1 and 2)
             for neighbor in self.get_diag_neighbors(current):
-                if (self.can_move_diagonal(current, neighbor, impassible_types) and
+                can_move, crossing_hazard = self.can_move_diagonal(current, neighbor, impassible_types)
+                if (can_move and
                     not any(fig.figure_type in impassible_types for fig in self.cell_contents[neighbor.y][neighbor.x])):
-                    new_cost = current_cost + 1.5
-                    new_hazard = current_hazard + self._get_hazard_damage(neighbor, figure)
+                    # D&D rules: first diagonal costs 1, second costs 2, third costs 1, etc.
+                    diag_cost = 2 if next_diag_expensive else 1
+                    new_cost = current_cost + diag_cost
+                    # Add hazard from destination square AND from crossing diagonal
+                    new_hazard = current_hazard + self._get_hazard_damage(neighbor, figure) + crossing_hazard
                     new_path = path + [neighbor]
                     counter += 1
-                    heapq.heappush(queue, (new_hazard, new_cost, counter, neighbor, new_path))
+                    # Toggle the diagonal cost for the next diagonal move
+                    heapq.heappush(queue, (new_hazard, new_cost, counter, neighbor, new_path, not next_diag_expensive))
+        
+        # Convert Pareto paths to the expected return format
+        # For each square, choose the "best" path: prefer lowest cost, then lowest hazard
+        # This maximizes movement efficiency (leaves more movement for further actions)
+        best_paths = {}
+        for coord, paths in pareto_paths.items():
+            # Sort by (cost, hazard) to get the most efficient path
+            paths.sort(key=lambda p: (p[0], p[1]))  # (cost, hazard)
+            cost, hazard, path = paths[0]
+            best_paths[coord] = {
+                'move_cost': cost,
+                'hazard_damage': hazard,
+                'path': path
+            }
         
         return best_paths
     

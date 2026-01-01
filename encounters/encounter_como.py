@@ -56,7 +56,7 @@ como_special_cards = [
     }
 ]
 
-como_forms = [
+como_form_cards = [
     {
         'id' : 1,
         'form': 'champion',
@@ -182,5 +182,7 @@ class EncounterComo(EncounterBase):
         self.activate_doomguards()
         self.process_meteor_impacts()  # Meteors land after boss acts, so new Doomguards don't activate this turn
         self.activate_boss()
-        como_aim_meteor(self.map, self)  # Aim new meteor for next turn
+        # Skip meteor aim if Visage was played (it will aim after heroes flee)
+        if not (hasattr(self.map, 'visage_needs_meteor_aim') and self.map.visage_needs_meteor_aim):
+            como_aim_meteor(self.map, self)  # Aim new meteor for next turn
         self.lava_heal()

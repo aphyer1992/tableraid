@@ -25,6 +25,7 @@ class GameUI:
 
         # used to prompt for hero actions
         self.select_mode = None
+        self.select_message = None  # Message to display during select mode
         self.valid_choices = []
         self.select_color = None
         self.select_cmd = None
@@ -72,6 +73,13 @@ class GameUI:
         # Clear previous
         for widget in self.left_panel.winfo_children():
             widget.destroy()
+
+        # Display select message if present
+        if hasattr(self, 'select_message') and self.select_message:
+            message_frame = tk.Frame(self.left_panel, borderwidth=2, relief="solid", padx=5, pady=3, bg="#ffffcc")
+            message_frame.pack(fill=tk.X, pady=(0, 5))
+            message_label = tk.Label(message_frame, text=self.select_message, font=("Arial", 10, "bold"), bg="#ffffcc", wraplength=180)
+            message_label.pack()
 
         # Add round number display at the top
         round_frame = tk.Frame(self.left_panel, borderwidth=2, relief="ridge", padx=5, pady=3)
