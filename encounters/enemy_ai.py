@@ -57,6 +57,12 @@ def make_enemy_move(game_map, enemy, player, move_range=None, impassible_types=N
     if impassible_types is None:
         impassible_types = enemy.impassible_types
     
+    # Check if enemy is already in attack range
+    current_distance = game_map.distance_between(enemy.position, player.position)
+    if current_distance <= enemy.attack_range:
+        print(f"Enemy AI: {enemy.name} is already in range ({current_distance} <= {enemy.attack_range}), not moving.")
+        return
+    
     # Get all adjacent squares to the player
     adjacent_squares = game_map.get_horver_neighbors(player.position) + game_map.get_diag_neighbors(player.position)
     

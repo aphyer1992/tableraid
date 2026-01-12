@@ -3,6 +3,7 @@ from game_targeting import TargetingContext
 from game_events import GameEvent
 from game_conditions import Condition
 from encounters.enemy_ai import choose_target_hero, make_enemy_move
+from combat_helpers import aoe_attack
 import random
 
 def como_hellfire_listener(figure, damage_taken, **kwargs):
@@ -155,19 +156,16 @@ def como_visage(map):
             damage = 0
             valid_destinations = {coords: info for coords, info in flee_info.items() if info['move_cost'] == 3}
         else:
-            # Can't flee full 3 spaces - take damage for difference
+            # Can't flee full 3 spaces - will take damage for difference after fleeing
             damage = int(3 - max_flee_distance)
             valid_destinations = {coords: info for coords, info in flee_info.items() if info['move_cost'] == max_flee_distance}
         
-        if damage > 0:
-            hero.lose_health(damage, source=como)
-            print(f"{hero.name} can only flee {max_flee_distance} spaces and takes {damage} damage!")
-        
-        # Store flee data for UI to process
+        # Store flee data for UI to process (damage will be applied after movement)
         if valid_destinations:
             map.visage_flee_queue.append({
                 'hero': hero,
-                'destinations': valid_destinations
+                'destinations': valid_destinations,
+                'damage': damage  # Store damage to apply after fleeing
             })
     
     # Process the flee queue via UI
@@ -184,12 +182,24 @@ def como_visage_process_next_flee(map):
         if hasattr(map, 'visage_needs_meteor_aim') and map.visage_needs_meteor_aim:
             como_aim_meteor(map, map.encounter)
             map.visage_needs_meteor_aim = False
+        
+        # Clear UI state and redraw
+        if hasattr(map, 'ui'):
+            map.ui.select_mode = None
+            map.ui.select_message = None
+            map.ui.select_color = None
+            map.ui.select_cmd = None
+            map.ui.valid_choices = []
+            map.ui.move_paths = None
+            map.ui.draw_map()
+            map.ui.draw_hero_panel()
         return
     
     # Get next hero to flee
     flee_data = map.visage_flee_queue.pop(0)
     hero_figure = flee_data['hero']
     valid_destinations = flee_data['destinations']  # Dict with path info
+    damage = flee_data.get('damage', 0)  # Damage to apply after fleeing
     
     # Get UI reference from map (needs to be set when UI is created)
     if not hasattr(map, 'ui'):
@@ -204,12 +214,14 @@ def como_visage_process_next_flee(map):
         if coords != hero_figure.position:
             path = valid_destinations[coords]['path']
             map.move_figure(hero_figure, coords, path=path)
-        ui.select_mode = None
-        ui.move_paths = None
-        ui.draw_map()
-        ui.draw_hero_panel()
         
-        # Process next hero in queue
+        # Apply damage after fleeing (if hero couldn't flee full distance)
+        if damage > 0:
+            hero_figure.lose_health(damage, source=map.get_figures_by_type(FigureType.BOSS)[0])
+            max_flee = valid_destinations[coords]['move_cost']
+            print(f"{hero_figure.name} could only flee {max_flee} spaces and takes {damage} damage!")
+        
+        # Process next hero in queue (this will update UI state and redraw)
         como_visage_process_next_flee(map)
     
     # Set up the UI for flee movement
@@ -335,9 +347,10 @@ def como_form_inferno_attack(map, como):
         # Deal damage to primary target
         map.deal_damage(como, target_hero, physical_damage=2, elemental_damage=2)
         
-        # Deal 1 elemental to other heroes within range 1 of target
-        for hero in map.get_figures_by_type(FigureType.HERO, {TargetingContext.AOE_ABILITY_HITTABLE: True}):
-            if hero != target_hero and map.distance_between(target_hero.position, hero.position) <= 1:
+        # Deal 1 elemental to other heroes within range 1 of target (excluding primary target)
+        nearby_heroes = map.get_figures_within_distance(target_hero.position, 1)
+        for hero in nearby_heroes:
+            if hero.figure_type == FigureType.HERO and hero != target_hero:
                 map.deal_damage(como, hero, physical_damage=0, elemental_damage=1)
 
 def como_form_swap(map):

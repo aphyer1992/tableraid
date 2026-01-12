@@ -1,5 +1,7 @@
 from figure import Figure, FigureType
 from coords import Coords
+from combat_helpers import aoe_attack, aoe_attack_all_heroes
+from event_helpers import register_temporary_listener
 from encounters.enemy_ai import basic_action, choose_target_hero, make_enemy_move
 from game_events import GameEvent
 from game_conditions import Condition
@@ -20,27 +22,24 @@ def sael_avalanche_knockback_listener(figure, damage_taken, damage_source, map):
 
 
 def sael_avalanche_crush(map, sael):
-    listener_id = map.events.register(
-        GameEvent.DAMAGE_TAKEN, 
-        lambda figure, damage_taken, damage_source, **kwargs: sael_avalanche_knockback_listener(figure, damage_taken, damage_source, map)
-    )
+    def knockback_listener(figure, damage_taken, damage_source, **kwargs):
+        if figure.figure_type == FigureType.HERO and isinstance(damage_source, Figure) and damage_source.figure_type == FigureType.BOSS:
+            map.knock_back(figure, damage_source.position, damage_taken['physical_damage_taken'])
+    
+    register_temporary_listener(map, GameEvent.DAMAGE_TAKEN, knockback_listener, GameEvent.DAMAGE_TAKEN)
     
     for _ in range(3):
         basic_action(map, sael)
-    
-    map.events.deregister(GameEvent.DAMAGE_TAKEN, listener_id)
 
 def sael_frozen_servants(map, sael):
     basic_action(map, sael)
 
-    map.add_figure(Figure("Frost Elemental", FigureType.MINION, health=5, physical_def=5, elemental_def=4, move=1, physical_dmg=1, elemental_dmg=1), Coords(0,2)) 
-    map.add_figure(Figure("Frost Elemental", FigureType.MINION, health=5, physical_def=5, elemental_def=4, move=1, physical_dmg=1, elemental_dmg=1), Coords(10,2)) 
+    map.add_figure(Figure("Frost Elemental", FigureType.MINION, health=5, physical_def=5, elemental_def=4, move=1, physical_dmg=1, elemental_dmg=1), Coords(0,8)) 
+    map.add_figure(Figure("Frost Elemental", FigureType.MINION, health=5, physical_def=5, elemental_def=4, move=1, physical_dmg=1, elemental_dmg=1), Coords(10,8)) 
     
 def storm_shield_pulse(map, sael):
     print('Storm Shield pulse from Sa\'el!')
-    heroes = map.get_figures_by_type(FigureType.HERO, {TargetingContext.AOE_ABILITY_HITTABLE: True})
-    for hero in heroes:
-        map.deal_damage(sael, hero, physical_damage=0, elemental_damage=1)
+    aoe_attack_all_heroes(sael, map, elemental_damage=1)
 
 def sael_storm_shield(map, sael):
     basic_action(map, sael)
@@ -123,9 +122,10 @@ def sael_frost_tomb(map, sael):
 def sael_whirlwind(map, sael):
     target_hero = choose_target_hero(map, sael)
     make_enemy_move(map, enemy=sael, player=target_hero)
-    for hero in map.get_figures_by_type(FigureType.HERO, {TargetingContext.AOE_ABILITY_HITTABLE: True}):
-        if map.distance_between(sael.position, hero.position) <= 2:
-            map.deal_damage(sael, hero, physical_damage=sael.physical_dmg, elemental_damage=sael.elemental_dmg + 1)
+    aoe_attack(sael, map, range=2, 
+               physical_damage=sael.physical_dmg, 
+               elemental_damage=sael.elemental_dmg + 1, 
+               target_type=FigureType.HERO)
 
 def sael_frost_breath(map, sael):
     target_hero = choose_target_hero(map, sael)

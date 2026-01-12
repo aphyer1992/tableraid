@@ -2,28 +2,16 @@ from figure import FigureType
 from game_conditions import Condition
 from game_targeting import TargetingContext
 from game_events import GameEvent
+from combat_helpers import aoe_attack
+from event_helpers import modify_stat_temporarily
 
 def warrior_taunt(figure, energy_spent, ui=None):
-    figure.targeting_parameters[TargetingContext.TARGETING_PRIORITY] += 1
-
-    def end_taunt_listener():
-        figure.targeting_parameters[TargetingContext.TARGETING_PRIORITY] -= 1
-        figure.map.events.deregister(GameEvent.HERO_TURN_START, listener_id)
-
-    listener_id = figure.map.events.register(GameEvent.HERO_TURN_START, end_taunt_listener)
+    modify_stat_temporarily(figure, {('targeting_parameters', TargetingContext.TARGETING_PRIORITY): 1})
 
 def warrior_bastion(figure, energy_spent, ui=None):
     assert(figure.physical_def == 3)
     assert(figure.elemental_def == 5)
-    figure.physical_def = 2
-    figure.elemental_def = 4
-
-    def end_bastion_listener():
-        figure.physical_def = 3
-        figure.elemental_def = 5
-        figure.map.events.deregister(GameEvent.HERO_TURN_START, listener_id)
-
-    listener_id = figure.map.events.register(GameEvent.HERO_TURN_START, end_bastion_listener)
+    modify_stat_temporarily(figure, {'physical_def': -1, 'elemental_def': -1})
 
 def warrior_shield_bash(warrior_figure, energy_spent, ui=None):
     ui.hero_attack(warrior_figure.hero, range=1, physical_damage=energy_spent, elemental_damage=0)
@@ -33,25 +21,15 @@ def paladin_smite(figure, energy_spent, ui=None):
     ui.hero_attack(figure.hero, range=1, physical_damage=0, elemental_damage=5)
 
 def paladin_holy_shield(figure, energy_spent, ui=None):
-    in_range = figure.map.get_figures_within_distance(figure.position, 1)
-    targets = [f for f in in_range if f.targeting_parameters[TargetingContext.AOE_ABILITY_HITTABLE] and f.figure_type != FigureType.HERO]
-    for target in targets:
-        # this jumps directly to the execute_attack because no target selection is needed.
-        ui.execute_attack(figure, target, physical_damage=0, elemental_damage=1)
+    aoe_attack(figure, ui, range=1, elemental_damage=1)
 
     assert(figure.physical_def == 4)
     assert(figure.elemental_def == 4)
-    figure.physical_def = 3
-    figure.elemental_def = 3
-    figure.targeting_parameters[TargetingContext.TARGETING_PRIORITY] += 1
-
-    def end_holy_shield_listener():
-        figure.physical_def = 4
-        figure.elemental_def = 4
-        figure.targeting_parameters[TargetingContext.TARGETING_PRIORITY] -= 1
-        figure.map.events.deregister(GameEvent.HERO_TURN_START, listener_id)
-
-    listener_id = figure.map.events.register(GameEvent.HERO_TURN_START, end_holy_shield_listener)
+    modify_stat_temporarily(figure, {
+        'physical_def': -1,
+        'elemental_def': -1,
+        ('targeting_parameters', TargetingContext.TARGETING_PRIORITY): 1
+    })
 
 def paladin_healing_light(figure, energy_spent, ui=None):
     assert(energy_spent >= 1)
@@ -92,12 +70,7 @@ def rogue_eviscerate(figure, energy_spent, ui=None):
     figure.add_effect('combo_points', 0, overwrite=True)
 
 def rogue_vanish(figure, energy_spent, ui=None):
-    figure.targeting_parameters[TargetingContext.TARGETING_PRIORITY] -= 1
-    def end_vanish_listener():
-        figure.targeting_parameters[TargetingContext.TARGETING_PRIORITY] += 1
-        figure.map.events.deregister(GameEvent.HERO_TURN_START, listener_id)
-
-    listener_id = figure.map.events.register(GameEvent.HERO_TURN_START, end_vanish_listener)
+    modify_stat_temporarily(figure, {('targeting_parameters', TargetingContext.TARGETING_PRIORITY): -1})
 
     # Check if there's an adjacent enemy
     adjacent_enemies = []
@@ -158,11 +131,7 @@ def mage_fireball(figure, energy_spent, ui=None):
     )
 
 def mage_fire_nova(figure, energy_spent, ui=None):
-    in_range = figure.map.get_figures_within_distance(figure.position, 2)
-    targets = [f for f in in_range if f.targeting_parameters[TargetingContext.AOE_ABILITY_HITTABLE] and f.figure_type != FigureType.HERO]
-    for target in targets:
-        # this jumps directly to the execute_attack because no target selection is needed.
-        ui.execute_attack(figure, target, physical_damage=0, elemental_damage=energy_spent)
+    aoe_attack(figure, ui, range=2, elemental_damage=energy_spent)
 
 def mage_combustion_listener(mage_hero, figure, roll_data, damage_type, damage_source):
     """Modify defense roll for burning targets - reduce roll by 1 on exact defense match, grant bonus on critical success"""

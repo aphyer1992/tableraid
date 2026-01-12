@@ -122,11 +122,23 @@ class Map:
         if path is not None:
             total_hazard_damage = 0
             # Skip the starting position, check damage on all squares moved through
-            for step in path[1:]:
+            for i, step in enumerate(path[1:], start=1):
+                # Add hazard from the destination square
                 hazard_damage = self._get_hazard_damage(step, figure)
                 print(f"DEBUG: Checking hazard at {step}: {hazard_damage}")
                 if hazard_damage > 0:
                     total_hazard_damage += hazard_damage
+                
+                # Check if this was a diagonal move and add crossing hazard
+                prev = path[i - 1]
+                dx = abs(step.x - prev.x)
+                dy = abs(step.y - prev.y)
+                if dx == 1 and dy == 1:
+                    # This is a diagonal move - check for diagonal crossing hazard
+                    _, crossing_hazard = self.can_move_diagonal(prev, step, figure.impassible_types)
+                    if crossing_hazard > 0:
+                        print(f"DEBUG: Diagonal crossing from {prev} to {step}: {crossing_hazard}")
+                        total_hazard_damage += crossing_hazard
             
             # Apply accumulated hazard damage as elemental damage with defense rolls
             if total_hazard_damage > 0:
@@ -309,7 +321,7 @@ class Map:
             return costs, came_from
         return costs
 
-    def bfs_with_hazards(self, start, impassible_types=None, max_distance=None, figure=None):
+    def bfs_with_hazards(self, start, impassible_types=None, max_distance=None, figure=None, valid_directions=None):
         """
         Enhanced BFS that tracks optimal paths considering both movement cost and hazard damage.
         Uses D&D movement rules: diagonal moves alternate between costing 1 and 2 move points.
@@ -319,6 +331,7 @@ class Map:
             impassible_types: Set of FigureTypes that block movement
             max_distance: Maximum movement distance
             figure: The figure moving (used to determine hazard damage)
+            valid_directions: Optional set of (dx, dy) tuples to restrict movement directions
             
         Returns:
             dict mapping each reachable coord to:
@@ -376,6 +389,13 @@ class Map:
             
             # Explore horizontal/vertical neighbors (always cost 1, don't affect diagonal counter)
             for neighbor in self.get_horver_neighbors(current):
+                # Check if this direction is allowed
+                if valid_directions is not None:
+                    dx = neighbor.x - current.x
+                    dy = neighbor.y - current.y
+                    if (dx, dy) not in valid_directions:
+                        continue
+                
                 if not any(fig.figure_type in impassible_types for fig in self.cell_contents[neighbor.y][neighbor.x]):
                     new_cost = current_cost + 1
                     new_hazard = current_hazard + self._get_hazard_damage(neighbor, figure)
@@ -386,6 +406,13 @@ class Map:
             
             # Explore diagonal neighbors (alternate between cost 1 and 2)
             for neighbor in self.get_diag_neighbors(current):
+                # Check if this direction is allowed
+                if valid_directions is not None:
+                    dx = neighbor.x - current.x
+                    dy = neighbor.y - current.y
+                    if (dx, dy) not in valid_directions:
+                        continue
+                
                 can_move, crossing_hazard = self.can_move_diagonal(current, neighbor, impassible_types)
                 if (can_move and
                     not any(fig.figure_type in impassible_types for fig in self.cell_contents[neighbor.y][neighbor.x])):
@@ -496,6 +523,7 @@ class Map:
         ]
         
         # Calculate which directions are valid for fleeing
+        import math
         valid_directions = []
         for dir_dx, dir_dy in directions:
             dot_product = dir_dx * dx + dir_dy * dy
@@ -509,63 +537,20 @@ class Map:
                 if cos_angle >= 0.707:
                     valid_directions.append((dir_dx, dir_dy))
         
-        # Use hazard-aware BFS but only allow movement in valid flee directions
-        max_move = fleeing_figure.move
-        best_paths = {}
-        
-        import heapq
-        counter = 0
-        queue = [(0, 0.0, counter, flee_pos, [flee_pos])]
-        
-        while queue:
-            current_hazard, current_cost, _, current, path = heapq.heappop(queue)
-            
-            # Skip if we've already found a better path to this square
-            if current in best_paths:
-                existing = best_paths[current]
-                if (existing['hazard_damage'] < current_hazard or 
-                    (existing['hazard_damage'] == current_hazard and existing['move_cost'] <= current_cost)):
-                    continue
-            
-            # Record this path
-            best_paths[current] = {
-                'move_cost': int(current_cost),
-                'hazard_damage': current_hazard,
-                'path': path.copy()
-            }
-            
-            # Don't expand if we've hit max distance
-            if current_cost >= max_move:
-                continue
-            
-            # Only explore neighbors in valid flee directions
-            for dir_dx, dir_dy in valid_directions:
-                neighbor = Coords(current.x + dir_dx, current.y + dir_dy)
-                
-                if not self.coords_in_bounds(neighbor):
-                    continue
-                
-                # Check if passable
-                blocking = [f for f in self.cell_contents[neighbor.y][neighbor.x] 
-                           if f.figure_type != FigureType.MARKER]
-                if blocking:
-                    continue
-                
-                # Calculate movement cost (diagonal vs orthogonal)
-                is_diagonal = (dir_dx != 0 and dir_dy != 0)
-                move_cost = 1.5 if is_diagonal else 1.0
-                
-                new_cost = current_cost + move_cost
-                new_hazard = current_hazard + self._get_hazard_damage(neighbor, fleeing_figure)
-                new_path = path + [neighbor]
-                counter += 1
-                heapq.heappush(queue, (new_hazard, new_cost, counter, neighbor, new_path))
+        # Use existing BFS with direction filter
+        all_paths = self.bfs_with_hazards(
+            start=flee_pos,
+            impassible_types={FigureType.HERO, FigureType.BOSS, FigureType.MINION, FigureType.OBSTACLE},
+            max_distance=fleeing_figure.move,
+            figure=fleeing_figure,
+            valid_directions=set(valid_directions)
+        )
         
         # Remove starting position from results
-        if flee_pos in best_paths:
-            del best_paths[flee_pos]
+        if flee_pos in all_paths:
+            del all_paths[flee_pos]
         
-        return best_paths
+        return all_paths
     
     def knock_back(self, figure, knockback_origin, knockback_distance):
         # Determine direction vector (dx, dy)

@@ -39,7 +39,9 @@ class GameUI:
 
     def setup_placement(self):
         self.select_mode = 'hero_placement'
-        self.valid_choices = [Coords(x, y) for y in range(self.map.height - 2, self.map.height) for x in range(self.map.width)]
+        # Get deployment zone from encounter
+        deployment_coords = self.map.encounter.get_deployment_zone()
+        self.valid_choices = [Coords(x, y) for (x, y) in deployment_coords]
         self.select_color = "lightblue"
         self.select_cmd = lambda coords: self.place_hero(coords.x, coords.y)
 
@@ -289,7 +291,8 @@ class GameUI:
             print("No valid choices for selection mode, resetting.")
             self.select_mode = None
 
-        for y in range(self.map.height):
+        # Iterate y in reverse so y=0 is at the bottom
+        for y in range(self.map.height - 1, -1, -1):
             for x in range(self.map.width):
                 cell = self.map.cell_contents[y][x]
                 if cell:
@@ -344,7 +347,9 @@ class GameUI:
                     
                     bg_color = bg_colors[0]  # Use first color for text background
 
-                cell_frame.grid(row=y, column=x)
+                # Place in grid with flipped y-axis (high y values at top of screen)
+                grid_row = self.map.height - 1 - y
+                cell_frame.grid(row=grid_row, column=x)
 
                 # Center: main figure info
                 center_label = tk.Label(cell_frame, text=rep["center"], bg=bg_color)

@@ -56,17 +56,15 @@ como_special_cards = [
     }
 ]
 
-como_form_cards = [
+como_forms = [
     {
         'id' : 1,
-        'form': 'champion',
         'name' : 'Form of the Champion',
         'text': 'While in the Form of the Champion, Comorragh gains +1 Physical Defense but -1 Elemental Defense.  His attacks deal 5 Physical damage and also hit any target within Range 3 in a straight line behind his target.',
         'function': como_form_champion,
     },
     {
         'id' : 2,
-        'form': 'inferno',
         'name' : 'Form of the Inferno',
         'text': 'While in the Form of the Inferno, Comorragh gains +1 Elemental Defense but -1 Physical Defense.  His attacks deal 2 Physical and 2 Elemental damage and also deal 1 Elemental damage to all other heroes within Range 1 of his target.',
         'function': como_form_inferno,
@@ -96,21 +94,6 @@ class EncounterComo(EncounterBase):
             self.build_deck()
 
         self.next_card = self.deck.pop(0)
-    
-    def get_boss_display_info(self):
-        """Return display items for boss panel: current form and next card"""
-        display_items = []
-        
-        # Show current form using the card definition text
-        if self.current_form:
-            form_card = next((card for card in como_form_cards if card['form'] == self.current_form), None)
-            if form_card:
-                display_items.append(form_card)
-        
-        # Show next card
-        display_items.append(self.next_card)
-        
-        return display_items
     
     def get_deployment_zone(self):
         zone = []
@@ -182,7 +165,5 @@ class EncounterComo(EncounterBase):
         self.activate_doomguards()
         self.process_meteor_impacts()  # Meteors land after boss acts, so new Doomguards don't activate this turn
         self.activate_boss()
-        # Skip meteor aim if Visage was played (it will aim after heroes flee)
-        if not (hasattr(self.map, 'visage_needs_meteor_aim') and self.map.visage_needs_meteor_aim):
-            como_aim_meteor(self.map, self)  # Aim new meteor for next turn
+        como_aim_meteor(self.map, self)  # Aim new meteor for next turn
         self.lava_heal()

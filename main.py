@@ -4,11 +4,12 @@ from heroes.hero_archetypes import hero_archetypes
 import ui
 from encounters.encounter_sael import EncounterSael
 from encounters.encounter_como import EncounterComo
+from encounters.encounter_across import EncounterAcross
 import random
 
 def main():
     #random.seed(421)  # For reproducibility in random actions
-    map = Map(EncounterComo())
+    map = Map(EncounterAcross())
     heroes = [Hero(archetype) for archetype in hero_archetypes]
 
     game_ui = ui.GameUI(map, heroes)
