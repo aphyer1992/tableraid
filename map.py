@@ -210,7 +210,7 @@ class Map:
         return [figure for figure in self.figures if figure.name == name]
 
     def get_figures_within_distance(self, coords, distance, impassible_types=None):
-        return [figure for figure in self.figures if self.distance_between(coords, figure.position, impassible_types=None) <= distance]
+        return [figure for figure in self.figures if figure.position is not None and self.distance_between(coords, figure.position, impassible_types=None) <= distance]
 
     def get_squares_within_distance(self, coords, distance, impassible_types=None):
         return [square for square in self.squares if self.distance_between(coords, square, impassible_types=impassible_types) <= distance]

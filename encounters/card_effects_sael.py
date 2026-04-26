@@ -34,8 +34,8 @@ def sael_avalanche_crush(map, sael):
 def sael_frozen_servants(map, sael):
     basic_action(map, sael)
 
-    map.add_figure(Figure("Frost Elemental", FigureType.MINION, health=5, physical_def=5, elemental_def=4, move=1, physical_dmg=1, elemental_dmg=1), Coords(0,8)) 
-    map.add_figure(Figure("Frost Elemental", FigureType.MINION, health=5, physical_def=5, elemental_def=4, move=1, physical_dmg=1, elemental_dmg=1), Coords(10,8)) 
+    map.add_figure(Figure("Frost Elemental", FigureType.MINION, health=5, physical_def=4, elemental_def=4, move=1, physical_dmg=1, elemental_dmg=1), Coords(0,8)) 
+    map.add_figure(Figure("Frost Elemental", FigureType.MINION, health=5, physical_def=4, elemental_def=4, move=1, physical_dmg=1, elemental_dmg=1), Coords(10,8)) 
     
 def storm_shield_pulse(map, sael):
     print('Storm Shield pulse from Sa\'el!')
@@ -78,7 +78,7 @@ def sael_chilling_winds(map, sael):
 def sael_frost_tomb(map, sael):
     basic_action(map, sael)
     target_hero = random.choice(map.get_figures_by_type(FigureType.HERO, {TargetingContext.ENEMY_TARGETABLE: True}))
-    tomb = Figure("Frost Tomb", FigureType.MINION, health=5, physical_def=5, elemental_def=4, move=0, cell_color="#0D126B")
+    tomb = Figure("Frost Tomb", FigureType.MINION, health=5, physical_def=4, elemental_def=4, move=0, cell_color="#0D126B")
     tomb.targeting_parameters[TargetingContext.RENDERING_PRIORITY] = 1 # in front of the hero.
     map.add_figure(tomb, target_hero.position, on_occupied='colocate')
     

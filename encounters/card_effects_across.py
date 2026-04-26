@@ -18,6 +18,7 @@ def create_slow_on_damage_listener(minion_types):
     
     def listener(figure, damage_taken, damage_source, **kwargs):
         if (damage_source and 
+            isinstance(damage_source, Figure) and
             damage_source.figure_type == FigureType.MINION and
             damage_source.get_effect('minion_type') in minion_types and
             figure.figure_type == FigureType.HERO):
@@ -75,23 +76,25 @@ def across_ignite_arrows(map):
             stalkers_with_ignite.append(minion)
     
     # Create a damage listener that applies splash damage when Stalkers attack
-    def ignite_arrows_listener(attacker, target, damage_taken, **kwargs):
+    def ignite_arrows_listener(figure, damage_taken, damage_source, **kwargs):
         # Only trigger for Stalkers with ignite_arrows effect
-        if (attacker and 
-            attacker.figure_type == FigureType.MINION and
-            attacker.get_effect('minion_type') == CharrMinionType.STALKER.value and
-            attacker.get_effect('ignite_arrows') and
-            target.figure_type == FigureType.HERO):
+        # figure = target (hero being damaged), damage_source = attacker (Stalker)
+        if (damage_source and 
+            isinstance(damage_source, Figure) and
+            damage_source.figure_type == FigureType.MINION and
+            damage_source.get_effect('minion_type') == CharrMinionType.STALKER.value and
+            damage_source.get_effect('ignite_arrows') and
+            figure.figure_type == FigureType.HERO):
             
             # Find heroes adjacent to the target
-            adjacent_positions = (map.get_horver_neighbors(target.position) + 
-                                map.get_diag_neighbors(target.position))
+            adjacent_positions = (map.get_horver_neighbors(figure.position) + 
+                                map.get_diag_neighbors(figure.position))
             
             for pos in adjacent_positions:
-                for figure in map.get_square_contents(pos):
-                    if figure.figure_type == FigureType.HERO and figure != target:
-                        print(f"{attacker.name}'s ignited arrow splashes to {figure.name}!")
-                        map.deal_damage(attacker, figure, physical_damage=0, elemental_damage=1)
+                for fig in map.get_square_contents(pos):
+                    if fig.figure_type == FigureType.HERO and fig != figure:
+                        print(f"{damage_source.name}'s ignited arrow splashes to {fig.name}!")
+                        map.deal_damage(damage_source, fig, physical_damage=0, elemental_damage=1)
     
     # Register the listener (persists beyond this turn)
     map.events.register(GameEvent.DAMAGE_TAKEN, ignite_arrows_listener)
@@ -100,16 +103,18 @@ def across_riposte(map):
     """Riposte - Heroes attacking adjacent Blade Storms take 1 physical damage"""
     from encounters.encounter_across import CharrMinionType
     
-    def riposte_listener(attacker, target, damage_taken, **kwargs):
+    def riposte_listener(figure, damage_taken, damage_source, **kwargs):
         # Check if a hero attacked an adjacent Blade Storm
-        if (attacker and target and
-            attacker.figure_type == FigureType.HERO and
-            target.figure_type == FigureType.MINION and
-            target.get_effect('minion_type') == CharrMinionType.BLADE_STORM.value and
-            map.distance_between(attacker.position, target.position) <= 1):
+        # figure = the one taking damage (Blade Storm), damage_source = the attacker (Hero)
+        if (figure and damage_source and
+            isinstance(damage_source, Figure) and
+            damage_source.figure_type == FigureType.HERO and
+            figure.figure_type == FigureType.MINION and
+            figure.get_effect('minion_type') == CharrMinionType.BLADE_STORM.value and
+            map.distance_between(damage_source.position, figure.position) <= 1):
             
-            print(f"{target.name} ripostes against {attacker.name}!")
-            map.deal_damage(target, attacker, physical_damage=1, elemental_damage=0)
+            print(f"{figure.name} ripostes against {damage_source.name}!")
+            map.deal_damage(figure, damage_source, physical_damage=1, elemental_damage=0)
     
     # Active during hero turn only
     register_temporary_listener(map, GameEvent.DAMAGE_TAKEN, riposte_listener, GameEvent.HERO_TURN_END)
@@ -150,6 +155,7 @@ def across_whirling_defense(map):
     def defense_boost_listener(figure, roll_data, damage_type, damage_source, **kwargs):
         # Check if a Stalker is defending against a non-adjacent attack
         if (figure and damage_source and
+            isinstance(damage_source, Figure) and
             figure.figure_type == FigureType.MINION and
             figure.get_effect('minion_type') == CharrMinionType.STALKER.value and
             damage_source.figure_type == FigureType.HERO and
@@ -202,7 +208,7 @@ def across_shieldwall(map):
             
             # Prevent movement during boss turn by setting move to 0
             modify_stat_temporarily(minion, {
-                'move': -minion.move  # Reduces move to 0
+                'base_move': -minion.base_move  # Reduces move to 0
             }, revert_event=GameEvent.BOSS_TURN_END)
             
             shieldwall_minions.append(minion)

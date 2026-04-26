@@ -70,7 +70,9 @@ class Figure:
         elif self.figure_type == FigureType.BOSS:
             return('{}\n{}/{}'.format(self.name[0:5], self.current_health, self.max_health))
         elif self.figure_type == FigureType.MINION:
-            return('{}\n{}/{}'.format(self.name[0:2], self.current_health, self.max_health))
+            # Use prefix if available (for Charr minions), otherwise use name
+            prefix = self.get_effect('prefix', self.name[0:2])
+            return('{}\n{}/{}'.format(prefix, self.current_health, self.max_health))
         else:
             return(self.name[0:2])
         

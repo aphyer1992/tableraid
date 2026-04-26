@@ -99,6 +99,7 @@ class EncounterComo(EncounterBase):
         zone = []
         for x in range(0, 11):
             zone.append((x, 0))
+            zone.append((x, 1))
         
         return zone
 

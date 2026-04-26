@@ -70,7 +70,7 @@ MINION_CONFIGS = {
         'name': 'Charr Flamecaller',
         'prefix': 'FC',
         'description': 'Charges power, then AOE damage',
-        'stats': {'health': 10, 'physical_def': 4, 'elemental_def': 5, 'move': 1,
+        'stats': {'health': 8, 'physical_def': 5, 'elemental_def': 4, 'move': 1,
                   'physical_dmg': 0, 'elemental_dmg': 1, 'attack_range': 1},
         'activate': minions_across.activate_flamecallers
     },
@@ -96,6 +96,7 @@ def blade_storm_bleed_listener(figure, damage_taken, damage_source, **kwargs):
     """Blade Storm passive: Apply Bleed 3 if attack brings target below half HP"""
     # Only trigger if damage source is a Blade Storm
     if (damage_source and 
+        hasattr(damage_source, 'figure_type') and
         damage_source.figure_type == FigureType.MINION and
         damage_source.get_effect('minion_type') == CharrMinionType.BLADE_STORM.value):
         
@@ -303,9 +304,6 @@ class EncounterAcross(EncounterBase):
         config = MINION_CONFIGS[minion_type]
         stats = config['stats']
         
-        # Create display text with prefix and health
-        display_text = f"{config['prefix']}\n{{hp}}/{{max_hp}}"
-        
         minion = Figure(
             config['name'], FigureType.MINION,
             health=stats['health'],
@@ -314,10 +312,10 @@ class EncounterAcross(EncounterBase):
             move=stats['move'],
             physical_dmg=stats['physical_dmg'],
             elemental_dmg=stats['elemental_dmg'],
-            attack_range=stats['attack_range'],
-            fixed_representation=display_text.format(hp=stats['health'], max_hp=stats['health'])
+            attack_range=stats['attack_range']
         )
         minion.add_effect('minion_type', minion_type.value)
+        minion.add_effect('prefix', config['prefix'])
         
         # Special case: Flamecallers start with 0 power counters
         if minion_type == CharrMinionType.FLAMECALLER:
@@ -331,7 +329,7 @@ class EncounterAcross(EncounterBase):
             else:
                 minion.add_effect('scout_direction', 'left')   # Moving towards left edge (x=0)
         
-        map.add_figure(minion, coords)
+        map.add_figure(minion, coords, on_occupied='find_empty')
         return minion
     
     def spawn_boss(self, map): #after the gauntlet phase ends
@@ -358,6 +356,37 @@ class EncounterAcross(EncounterBase):
         # Activate all minion types (happens in both phases)
         for minion_type in CharrMinionType:
             self.activate_minions(minion_type)
+        
+        # Handle minion spawn AFTER activation (so new minions don't act this round)
+        if self.next_card.get('spawn'):
+            spawn_type_str = self.next_card['spawn']
+            # Convert string to CharrMinionType enum
+            if spawn_type_str == 'scout_left':
+                minion_type = CharrMinionType.SCOUT
+                spawn_coords = Coords(0, 10)  # Left edge, top
+            elif spawn_type_str == 'scout_right':
+                minion_type = CharrMinionType.SCOUT
+                spawn_coords = Coords(10, 10)  # Right edge, top
+            else:
+                # Convert string to enum (e.g., 'blade_storm' -> CharrMinionType.BLADE_STORM)
+                minion_type = CharrMinionType[spawn_type_str.upper()]
+                # random spawn along top row
+                if self.phase == 'GAUNTLET':
+                    spawn_coords = Coords(random.randint(0, 10), 10)
+                else:
+                    # Boss phase: spawn on random board edge
+                    edge = random.choice(['top', 'bottom', 'left', 'right'])
+                    if edge == 'top':
+                        spawn_coords = Coords(random.randint(0, 10), 10)
+                    elif edge == 'bottom':
+                        spawn_coords = Coords(random.randint(0, 10), 0)
+                    elif edge == 'left':
+                        spawn_coords = Coords(0, random.randint(0, 10))
+                    else:  # right
+                        spawn_coords = Coords(10, random.randint(0, 10))
+            
+            print(f"A {MINION_CONFIGS[minion_type]['name']} spawns!")
+            self.spawn_minion(self.map, minion_type, spawn_coords)
         
         if self.phase == 'GAUNTLET':
             # Gauntlet-specific: move the map

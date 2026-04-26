@@ -46,13 +46,13 @@ sael_cards = [
     {   
         "id" : 5,
         "name": "Frozen Servants",
-        "text" : "Sa'el summons 2 Frost Elementals at the spawn points.  Each elemental has 5HP and Physical Vulnerability 1.  On future turns, Elementals act before Sa'el, with Move 1 and Attack 1 Physical + 1 Elemental.",
+        "text" : "Sa'el summons 2 Frost Elementals at the spawn points.  Each elemental has 5HP.  On future turns, Elementals act before Sa'el, with Move 1 and Attack 1 Physical + 1 Elemental.",
         "function" : sael_frozen_servants,
     },
     {   
         "id" : 6,
         "name": "Frost Tomb",
-        "text" : "After her basic action, Sa'el entombs a random hero in a Frost Tomb.  The hero is immobilized, unable to act, and takes 1 Elemental Damage at the end of each turn (hero or boss).  They can be healed, but otherwise are untargetable.  The Frost Tomb has 5HP and Physical Vulnerability 1.  If the Frost Tomb is destroyed, the hero is freed.",
+        "text" : "After her basic action, Sa'el entombs a random hero in a Frost Tomb.  The hero is immobilized, unable to act, and takes 1 Elemental Damage at the end of each turn (hero or boss).  They can be healed, but otherwise are untargetable.  The Frost Tomb has 5HP.  If the Frost Tomb is destroyed, the hero is freed.",
         "function" : sael_frost_tomb,
     },
     {   
@@ -116,9 +116,7 @@ class EncounterSael(EncounterBase):
         zone = []
         for x in range(0, 11):
             zone.append((x, 0))
-        for y in range(1,3):
-            zone.append((0, y))
-            zone.append((10, y))
+            zone.append((x, 1))
         
         return zone
 
@@ -136,7 +134,7 @@ class EncounterSael(EncounterBase):
         )
 
         blizzard = Figure("Blizzard", FigureType.MARKER, fixed_representation='Z')
-        map.add_figure(blizzard, Coords(5, 2), on_occupied='displace')
+        map.add_figure(blizzard, Coords(5, 8), on_occupied='displace')
 
     def activate_blizzard(self):
         print('Blizzard is moving...')

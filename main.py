@@ -1,15 +1,23 @@
 from map import Map
 from heroes.hero import Hero
 from heroes.hero_archetypes import hero_archetypes
+from campaign import Campaign
 import ui
-from encounters.encounter_sael import EncounterSael
-from encounters.encounter_como import EncounterComo
-from encounters.encounter_across import EncounterAcross
 import random
 
 def main():
     #random.seed(421)  # For reproducibility in random actions
-    map = Map(EncounterAcross())
+    
+    # Create campaign and show encounter selection
+    campaign = Campaign()
+    encounter_class = campaign.show_encounter_select()
+    
+    # If user closed the window without selecting, exit
+    if encounter_class is None:
+        return
+    
+    # Create map with selected encounter
+    map = Map(encounter_class())
     heroes = [Hero(archetype) for archetype in hero_archetypes]
 
     game_ui = ui.GameUI(map, heroes)
