@@ -47,8 +47,8 @@ EFFECTS_DISPLAY = {
     "combo_points": {
         "icon": "⚡",      # Unicode or path to image
         "position": "left",
-        "show_quantity": False,
-        "is_condition": False,  
+        "show_quantity": True,
+        "is_condition": False,
         "color" : "#ffd700",  # Optional color for display
     },
 }

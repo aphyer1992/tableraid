@@ -91,28 +91,32 @@ def sael_frost_tomb(map, sael):
     target_hero.hero.can_activate = False
 
     def tomb_damage_listener():
+        if target_hero not in map.figures:
+            return  # hero already dead, nothing to damage
         map.deal_damage(tomb, target_hero, physical_damage=0, elemental_damage=1)
 
     def tomb_freedom_listener(figure):
+        if figure != tomb and figure != target_hero:
+            return
+
+        # Deregister all tomb-related listeners regardless of which figure died
+        map.events.deregister(GameEvent.HERO_TURN_START, hero_damage_listener_id)
+        map.events.deregister(GameEvent.BOSS_TURN_START, boss_damage_listener_id)
+        map.events.deregister(GameEvent.FIGURE_DEATH, death_listener_id)
+
         if figure == tomb:
-            # Restore targeting parameters when freed
-            target_hero.targeting_parameters[TargetingContext.ENEMY_TARGETABLE] = True
-            target_hero.targeting_parameters[TargetingContext.AOE_ABILITY_HITTABLE] = True
-            target_hero.remove_condition(Condition.STUNNED)
-            
-            # Re-enable the hero's ability to activate, but don't give them actions until they do activate
-            target_hero.hero.can_activate = True
-            # Do NOT set move_available = True or attack_available = True here
-            # They get those when they activate
-            
-            # Re-enable all abilities
-            for ability in target_hero.hero.abilities:
-                ability.used = False
-            
-            # Deregister all tomb-related listeners
-            map.events.deregister(GameEvent.HERO_TURN_START, hero_damage_listener_id)
-            map.events.deregister(GameEvent.BOSS_TURN_START, boss_damage_listener_id)
-            map.events.deregister(GameEvent.FIGURE_DEATH, death_listener_id)
+            # Tomb was destroyed — free the hero (if still alive)
+            if target_hero in map.figures:
+                target_hero.targeting_parameters[TargetingContext.ENEMY_TARGETABLE] = True
+                target_hero.targeting_parameters[TargetingContext.AOE_ABILITY_HITTABLE] = True
+                target_hero.remove_condition(Condition.STUNNED)
+                target_hero.hero.can_activate = True
+                for ability in target_hero.hero.abilities:
+                    ability.used = False
+        else:
+            # Hero died while entombed — remove the now-empty tomb
+            if tomb in map.figures:
+                map.remove_figure(tomb)
 
     # tomb regularly damages, you are freed when it dies
     hero_damage_listener_id = map.events.register(GameEvent.HERO_TURN_START, lambda: tomb_damage_listener())

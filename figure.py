@@ -110,8 +110,9 @@ class Figure:
     def lose_health(self, amount, source=None):
         if amount < 0:
             raise ValueError("Health loss amount must be positive")
+        was_alive = self.current_health > 0
         self.current_health = max(0, self.current_health - amount)
-        if self.current_health == 0:
+        if was_alive and self.current_health == 0:
             self.map.events.trigger(GameEvent.FIGURE_DEATH, figure=self)
             self.map.remove_figure(self)
 

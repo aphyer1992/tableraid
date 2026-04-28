@@ -1,4 +1,5 @@
 import copy
+import random
 from coords import Coords
 from figure import FigureType
 
@@ -7,6 +8,7 @@ class GameStateSnapshot:
     
     def __init__(self, map_obj):
         """Create a snapshot of current game state."""
+        self.rng_state = random.getstate()
         self.map_state = self._snapshot_map(map_obj)
         self.figure_states = self._snapshot_figures(map_obj)
         self.encounter_state = self._snapshot_encounter(map_obj.encounter)
@@ -78,6 +80,7 @@ class GameStateSnapshot:
     
     def restore(self, map_obj):
         """Restore game state from this snapshot."""
+        random.setstate(self.rng_state)
         # First, restore map-level state
         map_obj.heroes_activated = self.map_state['heroes_activated']
         map_obj.current_round = self.map_state['current_round']

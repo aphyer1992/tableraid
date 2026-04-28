@@ -18,12 +18,12 @@ def register_temporary_listener(map, event, listener_fn, cleanup_event):
     """
     listener_id = map.events.register(event, listener_fn)
     
-    def cleanup_listener():
+    def cleanup_listener(**kwargs):
         map.events.deregister(event, listener_id)
-    
+
     cleanup_id = map.events.register(cleanup_event, cleanup_listener)
-    
-    def cleanup_cleanup():
+
+    def cleanup_cleanup(**kwargs):
         map.events.deregister(cleanup_event, cleanup_id)
     
     map.events.register(cleanup_event, cleanup_cleanup)
@@ -76,7 +76,7 @@ def modify_stat_temporarily(figure, stat_modifications, revert_event=GameEvent.H
             setattr(figure, key, getattr(figure, key) + delta)
     
     # Create revert function that undoes the modifications
-    def revert_listener():
+    def revert_listener(**kwargs):
         for key, delta in stat_modifications.items():
             if isinstance(key, tuple):
                 obj = getattr(figure, key[0])
