@@ -14,7 +14,7 @@ const VALID_COLORS = {
   default: 'rgba(100,180,255,0.45)',
 }
 
-export default function Cell({ x, y, figures, isValid, pendingType, specialColor, cellSize, onClick, onMouseDown, onMouseUp }) {
+export default function Cell({ x, y, figures, isValid, pendingType, specialColor, cellSize, onClick, onMouseDown, onMouseUp, isCursor, attackHeroName, onCellAttack }) {
   // Determine background
   let bg = '#222'
   if (specialColor) bg = specialColor
@@ -28,7 +28,10 @@ export default function Cell({ x, y, figures, isValid, pendingType, specialColor
       )
     : null
 
-  if (mainFigure?.cell_color) bg = mainFigure.cell_color
+  // Background: marker cell_color bleeds through even when a hero/boss is on top
+  const markerWithColor = figures.find(f => f.type === 'marker' && f.cell_color)
+  if (markerWithColor) bg = markerWithColor.cell_color
+  else if (mainFigure?.cell_color) bg = mainFigure.cell_color
   else if (mainFigure) bg = TYPE_COLORS[mainFigure.type] || bg
 
   let overlayColor = null
@@ -49,6 +52,8 @@ export default function Cell({ x, y, figures, isValid, pendingType, specialColor
     flexShrink: 0,
     background: bg,
     userSelect: 'none',
+    outline: isCursor ? '2px solid rgba(255,255,255,0.85)' : 'none',
+    outlineOffset: '-2px',
   }
 
   return (
@@ -119,6 +124,22 @@ export default function Cell({ x, y, figures, isValid, pendingType, specialColor
           {eff.icon}{eff.quantity != null ? eff.quantity : ''}
         </span>
       ))}
+
+      {/* Attack icon for activated heroes */}
+      {attackHeroName && (
+        <button
+          onMouseDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); onCellAttack?.() }}
+          style={{
+            position: 'absolute', top: 2, right: 2,
+            fontSize: 9, padding: '1px 3px', lineHeight: 1,
+            background: 'rgba(150,30,30,0.85)', color: '#fff',
+            borderRadius: 2, cursor: 'pointer', zIndex: 10,
+            border: 'none',
+          }}
+          title={`Attack with ${attackHeroName}`}
+        >⚔</button>
+      )}
     </div>
   )
 }

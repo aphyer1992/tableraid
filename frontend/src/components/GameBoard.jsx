@@ -11,7 +11,7 @@ const TYPE_COLORS = {
   marker: 'transparent',
 }
 
-export default function GameBoard({ mapData, validCoords, pendingType, onCellClick, onCellMouseDown, onCellMouseUp }) {
+export default function GameBoard({ mapData, validCoords, pendingType, onCellClick, onCellMouseDown, onCellMouseUp, cursorPos, heroAttackMap, onCellAttack }) {
   const { width, height, cells, special_tiles = {} } = mapData
 
   // Build special-tile lookup: "x,y" -> color
@@ -45,6 +45,9 @@ export default function GameBoard({ mapData, validCoords, pendingType, onCellCli
           onClick={() => onCellClick(x, y)}
           onMouseDown={() => onCellMouseDown?.(x, y)}
           onMouseUp={() => onCellMouseUp?.(x, y)}
+          isCursor={cursorPos != null && cursorPos.x === x && cursorPos.y === y}
+          attackHeroName={heroAttackMap?.[`${x},${y}`]}
+          onCellAttack={() => onCellAttack?.(x, y)}
         />
       )
     }

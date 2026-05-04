@@ -10,6 +10,8 @@ export default function App() {
   const [error, setError] = useState(null)
   const [meta, setMeta] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 })
+  const [xCostPrimed, setXCostPrimed] = useState(null) // { heroName, abilityIdx, abilityName, energy, minEnergy, maxEnergy }
   const isDraggingRef = useRef(false)
   const dragDestRef = useRef(null)   // mouseup coords if fired before 'move' response
   const dragStartRef = useRef(null)  // cell where drag began (click on same cell = cancel)
@@ -54,6 +56,9 @@ export default function App() {
       dragDestRef.current = null
       dragStartRef.current = null
       pendingRef.current = null
+      // Resync with server after any error — if the session was reset (server restart,
+      // etc.) this will return phase='idle' and the app will return to the setup screen.
+      try { setGameState(await api.getState()) } catch { /* leave existing state */ }
     } finally {
       setLoading(false)
     }
@@ -131,6 +136,106 @@ export default function App() {
     }
   }, [dispatch])
 
+  // Keyboard cursor navigation + ability hotkeys
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return
+      const mapW = gameState?.map?.width ?? 11
+      const mapH = gameState?.map?.height ?? 11
+      const pending = gameState?.pending_interaction
+
+      // When an X-cost ability is primed, intercept energy-adjustment keys
+      if (xCostPrimed) {
+        if (e.key === '+' || e.key === '=') {
+          e.preventDefault()
+          setXCostPrimed(p => ({ ...p, energy: Math.min(p.maxEnergy, p.energy + 1) }))
+          return
+        }
+        if (e.key === '-') {
+          e.preventDefault()
+          setXCostPrimed(p => ({ ...p, energy: Math.max(p.minEnergy, p.energy - 1) }))
+          return
+        }
+        const num = parseInt(e.key)
+        if (!isNaN(num) && num >= xCostPrimed.minEnergy && num <= xCostPrimed.maxEnergy) {
+          setXCostPrimed(p => ({ ...p, energy: num }))
+          return
+        }
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          const hero = gameState?.heroes?.find(h => h.name === xCostPrimed.heroName)
+          if (hero?.position) setCursorPos(hero.position)
+          dispatch('cast_ability', { hero: xCostPrimed.heroName, ability_index: xCostPrimed.abilityIdx, energy: xCostPrimed.energy })
+          setXCostPrimed(null)
+          return
+        }
+        if (e.key === 'Escape') { setXCostPrimed(null); return }
+        // Arrow keys fall through
+      }
+
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); setCursorPos(p => ({ ...p, x: Math.max(0, p.x - 1) })); return }
+      if (e.key === 'ArrowRight') { e.preventDefault(); setCursorPos(p => ({ ...p, x: Math.min(mapW - 1, p.x + 1) })); return }
+      if (e.key === 'ArrowUp')    { e.preventDefault(); setCursorPos(p => ({ ...p, y: Math.min(mapH - 1, p.y + 1) })); return }
+      if (e.key === 'ArrowDown')  { e.preventDefault(); setCursorPos(p => ({ ...p, y: Math.max(0, p.y - 1) })); return }
+
+      if (e.key === 'Escape') { dispatch('cancel'); return }
+
+      const heroAtCursor = gameState?.heroes?.find(
+        h => h.position?.x === cursorPos.x && h.position?.y === cursorPos.y
+      )
+
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        if (pending) {
+          const isValid = pending.valid_choices?.some(c => c.x === cursorPos.x && c.y === cursorPos.y)
+          if (isValid) {
+            if (pending.type !== 'hero_move') {
+              const hero = gameState?.heroes?.find(h => h.name === pending.hero_name)
+              if (hero?.position) setCursorPos(hero.position)
+            }
+            dispatch('select', { x: cursorPos.x, y: cursorPos.y })
+          }
+        } else if (gameState?.phase === 'hero_turn' && heroAtCursor && !heroAtCursor.activated) {
+          dispatch('activate', { hero: heroAtCursor.name })
+        }
+        return
+      }
+      if ((e.key === 'm' || e.key === 'M') && !pending) {
+        if (heroAtCursor?.activated && heroAtCursor?.move_available && !loading)
+          dispatch('move', { hero: heroAtCursor.name })
+        return
+      }
+      if ((e.key === 'a' || e.key === 'A') && !pending) {
+        if (heroAtCursor?.activated && heroAtCursor?.attack_available && !loading)
+          dispatch('attack', { hero: heroAtCursor.name })
+        return
+      }
+
+      // Ability hotkeys
+      if (!pending && !loading && heroAtCursor) {
+        const hotkey = e.key.toLowerCase()
+        const abilityIdx = heroAtCursor.abilities?.findIndex(a => a.hotkey === hotkey && a.is_castable)
+        if (abilityIdx != null && abilityIdx >= 0) {
+          const ability = heroAtCursor.abilities[abilityIdx]
+          if (ability.variable_cost) {
+            setXCostPrimed({
+              heroName: heroAtCursor.name,
+              abilityIdx,
+              abilityName: ability.name,
+              energy: ability.energy_cost,
+              minEnergy: ability.energy_cost,
+              maxEnergy: heroAtCursor.current_energy,
+            })
+          } else {
+            dispatch('cast_ability', { hero: heroAtCursor.name, ability_index: abilityIdx, energy: ability.energy_cost })
+          }
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [gameState, cursorPos, xCostPrimed, loading, dispatch])
+
   if (!meta) {
     return <div style={{ padding: 40 }}>Loading...</div>
   }
@@ -153,6 +258,20 @@ export default function App() {
       : pending?.valid_choices || []
     ).map(c => `${c.x},${c.y}`)
   )
+
+  const heroAttackMap = {}
+  if (gameState.heroes) {
+    for (const h of gameState.heroes) {
+      if (h.activated && h.attack_available && h.position) {
+        heroAttackMap[`${h.position.x},${h.position.y}`] = h.name
+      }
+    }
+  }
+
+  const handleCellAttack = (x, y) => {
+    const heroName = heroAttackMap[`${x},${y}`]
+    if (heroName && !pending && !loading) dispatch('attack', { hero: heroName })
+  }
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
@@ -191,6 +310,31 @@ export default function App() {
             </button>
           </div>
         )}
+        {xCostPrimed && (
+          <div style={{ background: '#2d1e5f', padding: '6px 12px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span>Cast <strong>{xCostPrimed.abilityName}</strong> with</span>
+            <button
+              onClick={() => setXCostPrimed(p => ({ ...p, energy: Math.max(p.minEnergy, p.energy - 1) }))}
+              style={{ background: '#444', color: '#fff', fontSize: 12, padding: '1px 6px', borderRadius: 3 }}
+            >−</button>
+            <strong style={{ color: '#f1c40f', minWidth: 14, textAlign: 'center' }}>{xCostPrimed.energy}</strong>
+            <button
+              onClick={() => setXCostPrimed(p => ({ ...p, energy: Math.min(p.maxEnergy, p.energy + 1) }))}
+              style={{ background: '#444', color: '#fff', fontSize: 12, padding: '1px 6px', borderRadius: 3 }}
+            >+</button>
+            <span style={{ color: '#f1c40f' }}>⚡</span>
+            <span style={{ flex: 1, color: '#aaa', fontSize: 11 }}>— Enter to confirm, Esc to cancel</span>
+            <button
+              onClick={() => { dispatch('cast_ability', { hero: xCostPrimed.heroName, ability_index: xCostPrimed.abilityIdx, energy: xCostPrimed.energy }); setXCostPrimed(null) }}
+              disabled={loading}
+              style={{ background: '#6c3483', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 3 }}
+            >Cast</button>
+            <button
+              onClick={() => setXCostPrimed(null)}
+              style={{ background: '#7f1d1d', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 3 }}
+            >Cancel</button>
+          </div>
+        )}
 
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           {gameState.map && (
@@ -201,6 +345,9 @@ export default function App() {
               onCellClick={handleCellClick}
               onCellMouseDown={handleCellMouseDown}
               onCellMouseUp={handleCellMouseUp}
+              cursorPos={cursorPos}
+              heroAttackMap={heroAttackMap}
+              onCellAttack={handleCellAttack}
             />
           )}
         </div>

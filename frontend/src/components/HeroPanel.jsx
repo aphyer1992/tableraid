@@ -157,9 +157,10 @@ function AbilityPill({ ability, idx, hero, canAct, dispatch }) {
 
   const flags = [ability.move_cost && 'M', ability.attack_cost && 'A'].filter(Boolean).join('')
   const costLabel = ability.variable_cost
-    ? `${energy}⚡`
+    ? 'X⚡'
     : ability.energy_cost > 0 ? `${ability.energy_cost}⚡` : ''
-  const label = `${ability.name}${costLabel ? ' ' + costLabel : ''}${flags ? ' ' + flags : ''}`
+  const hotkeyLabel = ability.hotkey ? `[${ability.hotkey}] ` : ''
+  const label = `${hotkeyLabel}${ability.name}${costLabel ? ' ' + costLabel : ''}${flags ? ' ' + flags : ''}`
 
   const handleCast = () => {
     dispatch('cast_ability', {

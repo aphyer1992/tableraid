@@ -25,11 +25,11 @@ def sael_avalanche_crush(map, sael):
     def knockback_listener(figure, damage_taken, damage_source, **kwargs):
         if figure.figure_type == FigureType.HERO and isinstance(damage_source, Figure) and damage_source.figure_type == FigureType.BOSS:
             map.knock_back(figure, damage_source.position, damage_taken['physical_damage_taken'])
-    
-    register_temporary_listener(map, GameEvent.DAMAGE_TAKEN, knockback_listener, GameEvent.DAMAGE_TAKEN)
-    
+
+    listener_id = map.events.register(GameEvent.DAMAGE_TAKEN, knockback_listener)
     for _ in range(3):
         basic_action(map, sael)
+    map.events.deregister(GameEvent.DAMAGE_TAKEN, listener_id)
 
 def sael_frozen_servants(map, sael):
     basic_action(map, sael)

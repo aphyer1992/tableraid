@@ -166,6 +166,9 @@ class GameSession:
             hero.attack_available = False
         ability.used = True
 
+        # Capture any figure effects that the ability's effect_fn might consume
+        pre_cast_combo_points = hero.figure.get_effect('combo_points')
+
         # Call the effect function with the controller as ui
         ability.effect_fn(hero.figure, energy_amount, ui=self.controller)
         if self.controller.pending_interaction is not None:
@@ -175,6 +178,7 @@ class GameSession:
                 'restore_ability_idx': ability_index,
                 'restore_move': move_consumed,
                 'restore_attack': attack_consumed,
+                'restore_combo_points': pre_cast_combo_points,
             }
         self.log_messages.append(f"{hero_name} cast {ability.name}")
 
@@ -234,6 +238,9 @@ class GameSession:
             idx = undo.get('restore_ability_idx')
             if idx is not None:
                 hero.abilities[idx].used = False
+            restore_combo_points = undo.get('restore_combo_points')
+            if restore_combo_points is not None:
+                hero.figure.add_effect('combo_points', restore_combo_points, overwrite=True)
         self.controller.pending_interaction = None
         self.log_messages.append("Action cancelled")
 

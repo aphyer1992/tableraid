@@ -74,6 +74,7 @@ def serialize_ability(ability):
         'usable_off_turn': ability.usable_off_turn,
         'used': ability.used,
         'is_castable': ability.is_castable(),
+        'hotkey': ability.hotkey,
     }
 
 

@@ -20,7 +20,7 @@ from heroes.ability_effects import (
     priest_renew
 )
 class Ability:
-    def __init__(self, name, description, effect_fn, energy_cost=0, variable_cost=False, move_cost=False, attack_cost=False, passive=False, usable_off_turn=False, setup_routine=None):
+    def __init__(self, name, description, effect_fn, energy_cost=0, variable_cost=False, move_cost=False, attack_cost=False, passive=False, usable_off_turn=False, setup_routine=None, hotkey=None):
         self.name = name
         self.description = description
         self.energy_cost = energy_cost
@@ -33,6 +33,7 @@ class Ability:
         self.passive = passive
         self.usable_off_turn = usable_off_turn
         self.setup_routine = setup_routine
+        self.hotkey = hotkey
         self.used = False
         self.hero = None  # This will be set when the ability is assigned to a hero
 
@@ -73,7 +74,8 @@ taunt_ability = Ability(
     variable_cost=False,
     move_cost=False,
     attack_cost=False,
-    effect_fn = warrior_taunt
+    effect_fn = warrior_taunt,
+    hotkey='t'
 )
 
 bastion_ability = Ability(
@@ -83,7 +85,8 @@ bastion_ability = Ability(
     variable_cost=False,
     move_cost=True,
     attack_cost=False,
-    effect_fn = warrior_bastion
+    effect_fn = warrior_bastion,
+    hotkey='b'
 )
 
 shield_bash_ability = Ability(
@@ -93,7 +96,8 @@ shield_bash_ability = Ability(
     variable_cost=True,
     move_cost=False,
     attack_cost=False,
-    effect_fn=warrior_shield_bash  # Placeholder for the actual effect function
+    effect_fn=warrior_shield_bash,
+    hotkey='s'
 )
 
 smite_ability = Ability(
@@ -103,7 +107,8 @@ smite_ability = Ability(
     variable_cost=False,
     move_cost=False,
     attack_cost=True,
-    effect_fn=paladin_smite  # Placeholder for the actual effect function
+    effect_fn=paladin_smite,
+    hotkey='s'
 )
 
 holy_shield_ability = Ability(
@@ -113,7 +118,8 @@ holy_shield_ability = Ability(
     variable_cost=False,
     move_cost=False,
     attack_cost=False,
-    effect_fn=paladin_holy_shield  # Placeholder for the actual effect function
+    effect_fn=paladin_holy_shield,
+    hotkey='h'
 )
 
 healing_light_ability = Ability(
@@ -123,7 +129,8 @@ healing_light_ability = Ability(
     variable_cost=True,
     move_cost=False,
     attack_cost=False,
-    effect_fn=paladin_healing_light  # Placeholder for the actual effect function
+    effect_fn=paladin_healing_light,
+    hotkey='l'
 )
 
 dual_wield_ability = Ability(
@@ -133,7 +140,8 @@ dual_wield_ability = Ability(
     variable_cost=False,
     move_cost=True,
     attack_cost=False,
-    effect_fn=rogue_dual_wield
+    effect_fn=rogue_dual_wield,
+    hotkey='d'
 )
 
 eviscerate_ability = Ability(
@@ -143,8 +151,9 @@ eviscerate_ability = Ability(
     variable_cost=False,
     move_cost=False,
     attack_cost=False,
-    effect_fn=rogue_eviscerate,  # Placeholder for the actual effect function
-    setup_routine=rogue_eviscerate_setup
+    effect_fn=rogue_eviscerate,
+    setup_routine=rogue_eviscerate_setup,
+    hotkey='e'
 )
 
 vanish_ability = Ability(
@@ -154,7 +163,8 @@ vanish_ability = Ability(
     variable_cost=False,
     move_cost=False,
     attack_cost=False,
-    effect_fn=rogue_vanish  # Placeholder for the actual effect function
+    effect_fn=rogue_vanish,
+    hotkey='v'
 )
 
 power_shot_ability = Ability(
@@ -164,7 +174,8 @@ power_shot_ability = Ability(
     variable_cost=False,
     move_cost=True,
     attack_cost=True,
-    effect_fn=ranger_power_shot  # Placeholder for the actual effect function
+    effect_fn=ranger_power_shot,
+    hotkey='p'
 )
 
 spirit_link_ability = Ability(
@@ -174,7 +185,8 @@ spirit_link_ability = Ability(
     variable_cost=False,
     move_cost=False,
     attack_cost=False,
-    effect_fn=ranger_spirit_link  # Placeholder for the actual effect function
+    effect_fn=ranger_spirit_link,
+    hotkey='l'
 )
 
 quick_step_ability = Ability(
@@ -185,7 +197,8 @@ quick_step_ability = Ability(
     move_cost=False,
     attack_cost=False,
     usable_off_turn=True,
-    effect_fn=ranger_quick_step  # Placeholder for the actual effect function
+    effect_fn=ranger_quick_step,
+    hotkey='q'
 )
 
 fireball_ability = Ability(
@@ -195,7 +208,8 @@ fireball_ability = Ability(
     variable_cost=False,
     move_cost=False,
     attack_cost=True,
-    effect_fn=mage_fireball  # Placeholder for the actual effect function
+    effect_fn=mage_fireball,
+    hotkey='f'
 )
 
 fire_nova_ability = Ability(
@@ -205,7 +219,8 @@ fire_nova_ability = Ability(
     variable_cost=True,
     move_cost=False,
     attack_cost=False,
-    effect_fn=mage_fire_nova  # Placeholder for the actual effect function
+    effect_fn=mage_fire_nova,
+    hotkey='n'
 )
 
 combustion_ability = Ability(
@@ -216,7 +231,7 @@ combustion_ability = Ability(
     move_cost=False,
     attack_cost=False,
     passive=True,
-    effect_fn=None,  # Placeholder for the actual effect function
+    effect_fn=None,
     setup_routine=mage_combustion_setup
 )
 
@@ -227,7 +242,8 @@ word_of_healing_ability = Ability(
     variable_cost=False,
     move_cost=False,
     attack_cost=False,
-    effect_fn=priest_word_of_healing  # Placeholder for the actual effect function
+    effect_fn=priest_word_of_healing,
+    hotkey='w'
 )
 
 circle_of_healing_ability = Ability(
@@ -237,7 +253,8 @@ circle_of_healing_ability = Ability(
     variable_cost=True,
     move_cost=False,
     attack_cost=False,
-    effect_fn=priest_circle_of_healing  # Placeholder for the actual effect function
+    effect_fn=priest_circle_of_healing,
+    hotkey='c'
 )
 
 renew_ability = Ability(
@@ -247,5 +264,6 @@ renew_ability = Ability(
     variable_cost=False,
     move_cost=False,
     attack_cost=True,
-    effect_fn=priest_renew  # Placeholder for the actual effect function
+    effect_fn=priest_renew,
+    hotkey='r'
 )

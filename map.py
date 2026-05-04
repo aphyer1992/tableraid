@@ -470,7 +470,7 @@ class Map:
             hypot = math.sqrt(v_x**2 + v_y**2)
             v_x, v_y = (v_x / hypot, v_y / hypot) # should never be 0
             dot = dx * v_x + dy * v_y
-            if dot >= angle_threshold:
+            if dot >= angle_threshold - 1e-9:
                 cone_squares.add(square)
         return cone_squares
 
