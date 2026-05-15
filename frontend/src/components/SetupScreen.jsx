@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 const PARTY_SIZE = 6
 
-export default function SetupScreen({ meta, onStart, error, loading }) {
+export default function SetupScreen({ meta, onStart, onBack, error, loading }) {
   const [encounter, setEncounter] = useState(meta.encounters[0]?.id || '')
   // Party is an ordered list of 6 class names (may repeat)
   const [party, setParty] = useState(
@@ -23,6 +23,14 @@ export default function SetupScreen({ meta, onStart, error, loading }) {
       <h1 style={{ fontSize: 36, letterSpacing: 2 }}>TABLERAID</h1>
 
       <div style={{ background: '#16213e', padding: 24, borderRadius: 8, minWidth: 380 }}>
+        {onBack && (
+          <button
+            onClick={onBack}
+            style={{ background: 'none', color: '#888', border: 'none', cursor: 'pointer', fontSize: 12, padding: 0, marginBottom: 12 }}
+          >
+            ← Back
+          </button>
+        )}
         <h2 style={{ marginBottom: 16, fontSize: 18 }}>New Game</h2>
 
         {/* Encounter picker */}

@@ -45,6 +45,14 @@ class GameEvent(Enum):
     GET_MOVE = "get_move"
     """Triggered when calculating a figure's movement range (allows modification).
     Args: figure - the Figure, move_data - dict with 'value' key that can be modified"""
+
+    FIGURE_MOVED = "figure_moved"
+    """Triggered after a figure is physically repositioned on the map.
+    Args: figure - the Figure that moved, old_coords - previous Coords, new_coords - new Coords"""
+
+    HERO_ACTIVATED = "hero_activated"
+    """Triggered when a hero activates (spends energy to take their turn).
+    Args: figure - the hero's Figure object"""
     
     # Map events
     FIGURE_ADDED = "figure_added"

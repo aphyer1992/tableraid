@@ -115,7 +115,7 @@ class GameUI:
             
             # Activate button with energy cost
             activation_cost = self.map.heroes_activated  # 0-5 energy based on turn order
-            btn_activate = self.create_button_with_costs(
+            self.create_button_with_costs(
                 action_row, "Activate",
                 command=lambda h=hero: self.activate_hero(h),
                 state=tk.NORMAL if (not hero.activated and hero.can_activate) else tk.DISABLED,
@@ -124,7 +124,7 @@ class GameUI:
             )
             
             # Move button with move cost indicator
-            btn_move = self.create_button_with_costs(
+            self.create_button_with_costs(
                 action_row, "Move",
                 command=lambda h=hero: self.hero_basic_move_action(h),
                 state=tk.NORMAL if hero.move_available else tk.DISABLED,
@@ -133,8 +133,8 @@ class GameUI:
             )
             
             # Attack button with attack cost indicator
-            btn_attack = self.create_button_with_costs(
-                action_row, "Attack", 
+            self.create_button_with_costs(
+                action_row, "Attack",
                 command=lambda h=hero: self.hero_basic_attack_action(h),
                 state=tk.NORMAL if hero.attack_available else tk.DISABLED,
                 width=7,
@@ -165,7 +165,7 @@ class GameUI:
                         energy_var.set(0)
                         spin = tk.Spinbox(frame_ability, from_=0, to=0, width=2, textvariable=energy_var, state=tk.DISABLED)
                     
-                    btn = self.create_button_with_costs(
+                    self.create_button_with_costs(
                         frame_ability,
                         ability.name,
                         command=lambda h=hero, a=ability, e=energy_var: self.use_ability(h, a, e.get()),
@@ -177,7 +177,7 @@ class GameUI:
                     )
                     spin.pack(side=tk.LEFT, padx=1)
                 else:
-                    btn = self.create_button_with_costs(
+                    self.create_button_with_costs(
                         frame_ability,
                         ability.name,
                         command=lambda h=hero, a=ability: self.use_ability(h, a),

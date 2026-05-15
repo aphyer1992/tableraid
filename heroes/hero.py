@@ -2,12 +2,14 @@ from figure import Figure, FigureType
 import copy
 
 from game_targeting import TargetingContext
+from game_events import GameEvent
 
 class Hero:
-    def __init__(self, archetype):
-        self.name = archetype['name']
+    def __init__(self, archetype, name_override=None):
+        self.name = name_override if name_override else archetype['name']
         self.archetype = archetype
         self.figure = Figure.from_hero_archetype(archetype)
+        self.figure.name = self.name
         self.figure.hero = self
         self.max_energy = 5
         self.current_energy = self.max_energy
@@ -18,6 +20,8 @@ class Hero:
         self.can_activate = True
         self.move_available = False
         self.attack_available = False
+        self.energy_spent_abilities = 0   # ability-cast energy this turn (Frozen Crown)
+        self.ability_cost_modifier = 0    # flat reduction to all ability costs (Mana Storm)
 
     @property
     def map(self):
@@ -81,9 +85,11 @@ class Hero:
         self.attack_available = False
         self.activated = False
         self.gain_energy(1)
+        self.energy_spent_abilities = 0
+        self.ability_cost_modifier = 0
         for ability in self.abilities:
             ability.used = False
-    
+
     def activate(self):
         if not self.can_activate:
             print(f'{self.name} cannot activate (disabled)')
@@ -94,5 +100,6 @@ class Hero:
         self.map.heroes_activated += 1
         self.move_available = True
         self.attack_available = True
+        self.map.events.trigger(GameEvent.HERO_ACTIVATED, figure=self.figure)
         return True
             

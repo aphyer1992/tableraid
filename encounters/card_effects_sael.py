@@ -1,7 +1,6 @@
 from figure import Figure, FigureType
 from coords import Coords
 from combat_helpers import aoe_attack, aoe_attack_all_heroes
-from event_helpers import register_temporary_listener
 from encounters.enemy_ai import basic_action, choose_target_hero, make_enemy_move
 from game_events import GameEvent
 from game_conditions import Condition
@@ -60,7 +59,6 @@ def sael_icicle_shards(map, sael):
     basic_action(map, sael)
 
     heroes = map.get_figures_by_type(FigureType.HERO, {TargetingContext.AOE_ABILITY_HITTABLE: True})
-    print(heroes)
     for hero in heroes:
         dmg_dealt = map.deal_damage(sael, hero, physical_damage=1, elemental_damage=0)
         if dmg_dealt > 0:
@@ -81,18 +79,21 @@ def sael_frost_tomb(map, sael):
     tomb = Figure("Frost Tomb", FigureType.MINION, health=5, physical_def=4, elemental_def=4, move=0, cell_color="#0D126B")
     tomb.targeting_parameters[TargetingContext.RENDERING_PRIORITY] = 1 # in front of the hero.
     map.add_figure(tomb, target_hero.position, on_occupied='colocate')
-    
+
     # Make hero not targetable by enemies or AOE, but still targetable by allies
     target_hero.targeting_parameters[TargetingContext.ENEMY_TARGETABLE] = False
     target_hero.targeting_parameters[TargetingContext.AOE_ABILITY_HITTABLE] = False
     target_hero.add_condition(Condition.STUNNED, 99)
-    
+    target_hero.add_effect('entombed', True, overwrite=True)
+
     # Disable the hero's ability to activate
     target_hero.hero.can_activate = False
 
     def tomb_damage_listener():
         if target_hero not in map.figures:
             return  # hero already dead, nothing to damage
+        if not target_hero.get_effect('entombed'):
+            return  # hero was freed (e.g. by restart round restoring snapshot)
         map.deal_damage(tomb, target_hero, physical_damage=0, elemental_damage=1)
 
     def tomb_freedom_listener(figure):
@@ -110,6 +111,7 @@ def sael_frost_tomb(map, sael):
                 target_hero.targeting_parameters[TargetingContext.ENEMY_TARGETABLE] = True
                 target_hero.targeting_parameters[TargetingContext.AOE_ABILITY_HITTABLE] = True
                 target_hero.remove_condition(Condition.STUNNED)
+                target_hero.add_effect('entombed', None, overwrite=True)
                 target_hero.hero.can_activate = True
                 for ability in target_hero.hero.abilities:
                     ability.used = False
@@ -147,7 +149,8 @@ def sael_frost_breath(map, sael):
 
 def sael_ice_collapse_listener(map):
     markers = map.get_figures_by_name("Incoming Ice")
-    assert(len(markers) == 2), "There should be exactly two Incoming Ice markers"
+    if not markers:
+        return  # markers were removed (e.g. by restart round), nothing to do
     for marker in markers:
         for hero in map.get_figures_by_type(FigureType.HERO, {TargetingContext.AOE_ABILITY_HITTABLE: True}):
             if hero.position == marker.position:

@@ -3,7 +3,6 @@ from heroes.hero import Hero
 from heroes.hero_archetypes import hero_archetypes
 from campaign import Campaign
 import ui
-import random
 
 def main():
     #random.seed(421)  # For reproducibility in random actions

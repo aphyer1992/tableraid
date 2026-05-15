@@ -4,7 +4,6 @@ from game_events import GameEvent
 from game_targeting import TargetingContext
 from event_helpers import register_temporary_listener, schedule_callback, modify_stat_temporarily
 from combat_helpers import aoe_attack_adjacent
-from coords import Coords
 import random
 
 def create_slow_on_damage_listener(minion_types):

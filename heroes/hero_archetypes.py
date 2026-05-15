@@ -49,7 +49,7 @@ hero_archetypes = [
         'physical_dmg' : 3,
         'elemental_dmg' : 0,
         'attack_range' : 4,
-        'move' : 4,
+        'move' : 3,
         'abilities' : [power_shot_ability, spirit_link_ability, quick_step_ability],
     },
     {

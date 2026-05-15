@@ -1,11 +1,8 @@
 from encounters.encounter_base import EncounterBase
 from figure import Figure, FigureType
-import random
 from coords import Coords
 from encounters.enemy_ai import basic_action
-from game_targeting import TargetingContext
 from game_events import GameEvent
-from game_conditions import Condition
 from encounters.card_effects_como import (
     como_aim_meteor,
     como_call,
@@ -15,7 +12,6 @@ from encounters.card_effects_como import (
     como_rite,
     como_form_champion,
     como_form_inferno,
-    como_basic_action,
     como_form_swap,
     como_hellfire_listener
 )

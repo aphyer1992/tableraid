@@ -6,7 +6,6 @@ Tests various scenarios including diagonal movement and hazard avoidance.
 from map import Map
 from figure import Figure, FigureType
 from coords import Coords
-from encounters.encounter_como import EncounterComo
 
 # Track test results globally
 test_results = []

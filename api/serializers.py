@@ -6,7 +6,6 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from figure import FigureType
 from game_targeting import TargetingContext
 from effects_display import EFFECTS_DISPLAY
 
@@ -67,12 +66,13 @@ def serialize_ability(ability):
         'name': ability.name,
         'description': ability.description,
         'energy_cost': ability.energy_cost,
+        'effective_cost': ability.effective_cost(),
         'variable_cost': ability.variable_cost,
         'move_cost': ability.move_cost,
         'attack_cost': ability.attack_cost,
         'passive': ability.passive,
         'usable_off_turn': ability.usable_off_turn,
-        'used': ability.used,
+        'used': ability.used or ability.per_fight_used,
         'is_castable': ability.is_castable(),
         'hotkey': ability.hotkey,
     }

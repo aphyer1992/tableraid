@@ -66,24 +66,27 @@ def modify_stat_temporarily(figure, stat_modifications, revert_event=GameEvent.H
         from game_targeting import TargetingContext
         modify_stat_temporarily(figure, {('targeting_parameters', TargetingContext.TARGETING_PRIORITY): 1})
     """
-    # Apply the modifications
+    # Capture original values and apply the modifications
+    original_values = {}
     for key, delta in stat_modifications.items():
         # Handle nested attributes like ('targeting_parameters', TargetingContext.TARGETING_PRIORITY)
         if isinstance(key, tuple):
             obj = getattr(figure, key[0])
+            original_values[key] = obj[key[1]]
             obj[key[1]] = obj[key[1]] + delta
         else:
+            original_values[key] = getattr(figure, key)
             setattr(figure, key, getattr(figure, key) + delta)
-    
-    # Create revert function that undoes the modifications
+
+    # Create revert function that restores original values (idempotent even if snapshot already restored them)
     def revert_listener(**kwargs):
-        for key, delta in stat_modifications.items():
+        for key, original in original_values.items():
             if isinstance(key, tuple):
                 obj = getattr(figure, key[0])
-                obj[key[1]] = obj[key[1]] - delta
+                obj[key[1]] = original
             else:
-                setattr(figure, key, getattr(figure, key) - delta)
-        
+                setattr(figure, key, original)
+
         figure.map.events.deregister(revert_event, listener_id)
     
     # Register the revert listener

@@ -3,7 +3,6 @@ from game_targeting import TargetingContext
 from game_events import GameEvent
 from game_conditions import Condition
 from encounters.enemy_ai import choose_target_hero, make_enemy_move
-from combat_helpers import aoe_attack
 import random
 
 def como_hellfire_listener(figure, damage_taken, **kwargs):
@@ -355,7 +354,6 @@ def como_form_inferno_attack(map, como):
 
 def como_form_swap(map):
     """Swap Forms between Champion and Inferno"""
-    como = map.get_figures_by_type(FigureType.BOSS)[0]
     encounter = map.encounter
     
     if encounter.current_form == 'champion':

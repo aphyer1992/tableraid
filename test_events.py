@@ -21,7 +21,7 @@ def test_event_enum():
     listener_id1 = em.register(GameEvent.HERO_TURN_START, lambda: test_callback("enum_hero_start"))
     
     # Register using string (backwards compatibility)
-    listener_id2 = em.register("hero_turn_start", lambda: test_callback("string_hero_start"))
+    em.register("hero_turn_start", lambda: test_callback("string_hero_start"))
     
     # Trigger using enum
     em.trigger(GameEvent.HERO_TURN_START)

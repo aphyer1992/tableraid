@@ -160,6 +160,7 @@ class Map:
         self.cell_contents[old_coords.y][old_coords.x].remove(figure)
         self.cell_contents[coords.y][coords.x].append(figure)
         self.positions[figure] = coords
+        self.events.trigger(GameEvent.FIGURE_MOVED, figure=figure, old_coords=old_coords, new_coords=coords)
 
     def get_figure_position(self, figure):
         return self.positions.get(figure)

@@ -4,9 +4,17 @@ import GameBoard from './components/GameBoard.jsx'
 import HeroPanel from './components/HeroPanel.jsx'
 import BossPanel from './components/BossPanel.jsx'
 import SetupScreen from './components/SetupScreen.jsx'
+import HomeScreen from './components/HomeScreen.jsx'
+import CampaignSetupScreen from './components/CampaignSetupScreen.jsx'
+import CampaignScreen from './components/CampaignScreen.jsx'
+
+const BOSS_DISPLAY = { sael: "Sa'el", como: 'Comorragh' }
+const bossName = (id) => BOSS_DISPLAY[id] || id
 
 export default function App() {
+  const [mode, setMode] = useState('home')
   const [gameState, setGameState] = useState(null)
+  const [campaignState, setCampaignState] = useState(null)
   const [error, setError] = useState(null)
   const [meta, setMeta] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -17,10 +25,17 @@ export default function App() {
   const dragStartRef = useRef(null)  // cell where drag began (click on same cell = cancel)
   const pendingRef = useRef(null)    // pending_interaction set by 'move' response (avoids stale closure)
 
-  // Load available encounters + heroes on mount
+  // Load available encounters + heroes on mount; also try to restore an existing campaign
   useEffect(() => {
     api.getMeta().then(setMeta).catch(console.error)
     api.getState().then(setGameState).catch(console.error)
+    api.campaignState().then(cs => {
+      if (cs?.campaign) {
+        setCampaignState(cs)
+        const phase = cs.campaign.phase
+        setMode(phase === 'fight' ? 'campaign_fight' : `campaign_${phase}`)
+      }
+    }).catch(() => {})
   }, [])
 
   const dispatch = useCallback(async (type, extra = {}) => {
@@ -70,6 +85,7 @@ export default function App() {
     try {
       const newState = await api.start(encounter, heroes)
       setGameState(newState)
+      setMode('single_game')
     } catch (e) {
       setError(e.message)
     } finally {
@@ -77,33 +93,145 @@ export default function App() {
     }
   }, [])
 
+  // Campaign handlers
+  const handleCampaignStart = useCallback(async (roster) => {
+    setError(null)
+    setLoading(true)
+    try {
+      const cs = await api.campaignCreate(roster)
+      setCampaignState(cs)
+      setMode('campaign_hub')
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const handleCampaignAction = useCallback(async (actionName, payload = {}) => {
+    setError(null)
+    setLoading(true)
+    try {
+      let cs
+      if (actionName === 'select_party') {
+        cs = await api.campaignParty(payload.hero_ids)
+      } else if (actionName === 'loot_assign') {
+        cs = await api.campaignLootAssign(payload.assignments)
+      } else if (actionName === 'add_hero') {
+        cs = await api.campaignRosterAdd(payload.archetype)
+      } else {
+        throw new Error(`Unknown campaign action: ${actionName}`)
+      }
+      setCampaignState(cs)
+      const phase = cs.campaign.phase
+      setMode(phase === 'fight' ? 'campaign_fight' : `campaign_${phase}`)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const handleCampaignFightStart = useCallback(async () => {
+    setError(null)
+    setLoading(true)
+    try {
+      const cs = await api.campaignFightStart()
+      setCampaignState(cs)
+      setMode('campaign_fight')
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const handleCampaignResign = useCallback(async () => {
+    if (!window.confirm('Resign this fight? You will lose this week and reset to the first boss.')) return
+    setError(null)
+    setLoading(true)
+    try {
+      const cs = await api.campaignFightResign()
+      setCampaignState(cs)
+      setMode('campaign_hub')
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const campaignDispatch = useCallback(async (type, extra = {}) => {
+    setError(null)
+    setLoading(true)
+    try {
+      const cs = await api.campaignFightAction(type, extra)
+      setCampaignState(cs)
+      const phase = cs.campaign.phase
+      if (phase !== 'fight') {
+        setMode(`campaign_${phase}`)
+      }
+      // Handle drag-to-move for campaign fight: mirror single-game drag logic
+      if (type === 'move' && isDraggingRef.current) {
+        const dest = dragDestRef.current
+        dragDestRef.current = null
+        if (dest !== null) {
+          isDraggingRef.current = false
+          const valid = cs.fight?.pending_interaction?.valid_choices || []
+          const isSameCell = dragStartRef.current && dest.x === dragStartRef.current.x && dest.y === dragStartRef.current.y
+          if (!isSameCell && valid.some(c => c.x === dest.x && c.y === dest.y)) {
+            const cs2 = await api.campaignFightAction('select', dest)
+            setCampaignState(cs2)
+          } else {
+            const cs2 = await api.campaignFightAction('cancel', {})
+            setCampaignState(cs2)
+          }
+        } else {
+          pendingRef.current = cs.fight?.pending_interaction
+        }
+      }
+    } catch (e) {
+      setError(e.message)
+      isDraggingRef.current = false
+      dragDestRef.current = null
+      dragStartRef.current = null
+      pendingRef.current = null
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Active fight state — either single game or campaign fight
+  const activeFight = mode === 'campaign_fight' ? campaignState?.fight : gameState
+  const activeDispatch = mode === 'campaign_fight' ? campaignDispatch : dispatch
+
   // Clicks resolve pending interactions during hero turn (placement handled by mousedown)
   const handleCellClick = useCallback((x, y) => {
-    if (!gameState) return
-    if (gameState.pending_interaction) {
-      const valid = gameState.pending_interaction.valid_choices || []
+    if (!activeFight) return
+    if (activeFight.pending_interaction) {
+      const valid = activeFight.pending_interaction.valid_choices || []
       if (valid.some(c => c.x === x && c.y === y)) {
-        dispatch('select', { x, y })
+        activeDispatch('select', { x, y })
       }
     }
-  }, [gameState, dispatch])
+  }, [activeFight, activeDispatch])
 
   // Drag-to-move: mousedown on an activated hero tile with move_available initiates move.
   // Also handles placement: mousedown on a valid placement zone cell places the next hero.
   const handleCellMouseDown = useCallback((x, y) => {
-    if (!gameState) return
+    if (!activeFight) return
 
     // Placement phase: mousedown on valid zone cell places the next hero
-    if (gameState.phase === 'placement') {
-      const zone = gameState.placement_zone || []
+    if (activeFight.phase === 'placement') {
+      const zone = activeFight.placement_zone || []
       if (zone.some(c => c.x === x && c.y === y)) {
-        dispatch('place_hero', { x, y })
+        activeDispatch('place_hero', { x, y })
       }
       return
     }
 
-    if (gameState.phase !== 'hero_turn' || gameState.pending_interaction) return
-    const hero = gameState.heroes.find(h =>
+    if (activeFight.phase !== 'hero_turn' || activeFight.pending_interaction) return
+    const hero = activeFight.heroes.find(h =>
       h.activated && h.move_available && h.position?.x === x && h.position?.y === y
     )
     if (!hero) return
@@ -111,8 +239,8 @@ export default function App() {
     dragDestRef.current = null
     dragStartRef.current = { x, y }
     pendingRef.current = null
-    dispatch('move', { hero: hero.name })
-  }, [gameState, dispatch])
+    activeDispatch('move', { hero: hero.name })
+  }, [activeFight, activeDispatch])
 
   // Drag-to-move: mouseup on destination resolves the move.
   // Uses pendingRef (not gameState) to avoid stale closure when API responds before mouseup.
@@ -126,23 +254,23 @@ export default function App() {
       isDraggingRef.current = false
       const valid = pi.valid_choices || []
       if (!isSameCell && valid.some(c => c.x === x && c.y === y)) {
-        dispatch('select', { x, y })
+        activeDispatch('select', { x, y })
       } else {
-        dispatch('cancel')
+        activeDispatch('cancel')
       }
     } else {
       // Case B: API still in flight — store dest; dispatch will resolve after response
       dragDestRef.current = { x, y }
     }
-  }, [dispatch])
+  }, [activeDispatch])
 
   // Keyboard cursor navigation + ability hotkeys
   useEffect(() => {
     const onKey = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return
-      const mapW = gameState?.map?.width ?? 11
-      const mapH = gameState?.map?.height ?? 11
-      const pending = gameState?.pending_interaction
+      const mapW = activeFight?.map?.width ?? 11
+      const mapH = activeFight?.map?.height ?? 11
+      const pending = activeFight?.pending_interaction
 
       // When an X-cost ability is primed, intercept energy-adjustment keys
       if (xCostPrimed) {
@@ -163,9 +291,9 @@ export default function App() {
         }
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          const hero = gameState?.heroes?.find(h => h.name === xCostPrimed.heroName)
+          const hero = activeFight?.heroes?.find(h => h.name === xCostPrimed.heroName)
           if (hero?.position) setCursorPos(hero.position)
-          dispatch('cast_ability', { hero: xCostPrimed.heroName, ability_index: xCostPrimed.abilityIdx, energy: xCostPrimed.energy })
+          activeDispatch('cast_ability', { hero: xCostPrimed.heroName, ability_index: xCostPrimed.abilityIdx, energy: xCostPrimed.energy })
           setXCostPrimed(null)
           return
         }
@@ -178,9 +306,9 @@ export default function App() {
       if (e.key === 'ArrowUp')    { e.preventDefault(); setCursorPos(p => ({ ...p, y: Math.min(mapH - 1, p.y + 1) })); return }
       if (e.key === 'ArrowDown')  { e.preventDefault(); setCursorPos(p => ({ ...p, y: Math.max(0, p.y - 1) })); return }
 
-      if (e.key === 'Escape') { dispatch('cancel'); return }
+      if (e.key === 'Escape') { activeDispatch('cancel'); return }
 
-      const heroAtCursor = gameState?.heroes?.find(
+      const heroAtCursor = activeFight?.heroes?.find(
         h => h.position?.x === cursorPos.x && h.position?.y === cursorPos.y
       )
 
@@ -190,24 +318,24 @@ export default function App() {
           const isValid = pending.valid_choices?.some(c => c.x === cursorPos.x && c.y === cursorPos.y)
           if (isValid) {
             if (pending.type !== 'hero_move') {
-              const hero = gameState?.heroes?.find(h => h.name === pending.hero_name)
+              const hero = activeFight?.heroes?.find(h => h.name === pending.hero_name)
               if (hero?.position) setCursorPos(hero.position)
             }
-            dispatch('select', { x: cursorPos.x, y: cursorPos.y })
+            activeDispatch('select', { x: cursorPos.x, y: cursorPos.y })
           }
-        } else if (gameState?.phase === 'hero_turn' && heroAtCursor && !heroAtCursor.activated) {
-          dispatch('activate', { hero: heroAtCursor.name })
+        } else if (activeFight?.phase === 'hero_turn' && heroAtCursor && !heroAtCursor.activated) {
+          activeDispatch('activate', { hero: heroAtCursor.name })
         }
         return
       }
       if ((e.key === 'm' || e.key === 'M') && !pending) {
         if (heroAtCursor?.activated && heroAtCursor?.move_available && !loading)
-          dispatch('move', { hero: heroAtCursor.name })
+          activeDispatch('move', { hero: heroAtCursor.name })
         return
       }
       if ((e.key === 'a' || e.key === 'A') && !pending) {
         if (heroAtCursor?.activated && heroAtCursor?.attack_available && !loading)
-          dispatch('attack', { hero: heroAtCursor.name })
+          activeDispatch('attack', { hero: heroAtCursor.name })
         return
       }
 
@@ -227,41 +355,89 @@ export default function App() {
               maxEnergy: heroAtCursor.current_energy,
             })
           } else {
-            dispatch('cast_ability', { hero: heroAtCursor.name, ability_index: abilityIdx, energy: ability.energy_cost })
+            activeDispatch('cast_ability', { hero: heroAtCursor.name, ability_index: abilityIdx, energy: ability.energy_cost })
           }
         }
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [gameState, cursorPos, xCostPrimed, loading, dispatch])
+  }, [activeFight, cursorPos, xCostPrimed, loading, activeDispatch])
 
   if (!meta) {
     return <div style={{ padding: 40 }}>Loading...</div>
   }
 
-  if (!gameState || gameState.phase === 'idle') {
+  if (mode === 'home') {
+    return (
+      <HomeScreen
+        onSingle={() => { setError(null); setMode('single_setup') }}
+        onCampaign={() => { setError(null); setMode('campaign_setup') }}
+      />
+    )
+  }
+
+  if (mode === 'single_setup') {
     return (
       <SetupScreen
         meta={meta}
         onStart={handleStart}
+        onBack={() => setMode('home')}
         error={error}
         loading={loading}
       />
     )
   }
 
-  const pending = gameState.pending_interaction
+  if (mode === 'campaign_setup') {
+    return (
+      <CampaignSetupScreen
+        meta={meta}
+        onStart={handleCampaignStart}
+        onBack={() => setMode('home')}
+        error={error}
+        loading={loading}
+      />
+    )
+  }
+
+  if (mode === 'campaign_hub' || mode === 'campaign_loot' || mode === 'campaign_finished') {
+    return (
+      <CampaignScreen
+        campaignState={campaignState}
+        onAction={handleCampaignAction}
+        onFightStart={handleCampaignFightStart}
+        availableHeroes={meta.heroes}
+        error={error}
+        loading={loading}
+      />
+    )
+  }
+
+  // Single game idle — shouldn't normally reach here since we route to setup, but handle gracefully
+  if (mode === 'single_game' && (!gameState || gameState.phase === 'idle')) {
+    return (
+      <SetupScreen
+        meta={meta}
+        onStart={handleStart}
+        onBack={() => setMode('home')}
+        error={error}
+        loading={loading}
+      />
+    )
+  }
+
+  const pending = activeFight?.pending_interaction
   const validCoords = new Set(
-    (gameState.phase === 'placement'
-      ? gameState.placement_zone
+    (activeFight?.phase === 'placement'
+      ? activeFight.placement_zone
       : pending?.valid_choices || []
     ).map(c => `${c.x},${c.y}`)
   )
 
   const heroAttackMap = {}
-  if (gameState.heroes) {
-    for (const h of gameState.heroes) {
+  if (activeFight?.heroes) {
+    for (const h of activeFight.heroes) {
       if (h.activated && h.attack_available && h.position) {
         heroAttackMap[`${h.position.x},${h.position.y}`] = h.name
       }
@@ -270,18 +446,35 @@ export default function App() {
 
   const handleCellAttack = (x, y) => {
     const heroName = heroAttackMap[`${x},${y}`]
-    if (heroName && !pending && !loading) dispatch('attack', { hero: heroName })
+    if (heroName && !pending && !loading) activeDispatch('attack', { hero: heroName })
   }
 
+  // Campaign fight header strip
+  const campaignFightHeader = mode === 'campaign_fight' && campaignState ? (
+    <div style={{ background: '#0a0a14', borderBottom: '1px solid #333', padding: '4px 16px', display: 'flex', gap: 24, alignItems: 'center', fontSize: 13 }}>
+      <span style={{ color: '#f1c40f' }}>Week <strong>{campaignState.campaign.week}</strong></span>
+      <span style={{ color: '#aaa' }}>vs <strong style={{ color: '#e74c3c' }}>{bossName(campaignState.campaign.current_boss) || 'Boss'}</strong></span>
+      <button
+        onClick={handleCampaignResign}
+        disabled={loading}
+        style={{ marginLeft: 'auto', background: '#5d1a1a', color: '#f66', border: '1px solid #7f1d1d', borderRadius: 3, padding: '2px 10px', fontSize: 11, cursor: 'pointer', opacity: loading ? 0.5 : 1 }}
+      >
+        Resign Week
+      </button>
+    </div>
+  ) : null
+
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+      {campaignFightHeader}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
       {/* Left: hero panel */}
       <div style={{ width: 220, overflowY: 'auto', background: '#16213e', borderRight: '1px solid #333' }}>
         <HeroPanel
-          heroes={gameState.heroes}
-          phase={gameState.phase}
+          heroes={activeFight?.heroes}
+          phase={activeFight?.phase}
           pending={pending}
-          dispatch={dispatch}
+          dispatch={activeDispatch}
           loading={loading}
         />
       </div>
@@ -293,16 +486,16 @@ export default function App() {
             {error}
           </div>
         )}
-        {gameState.phase === 'placement' && (
+        {activeFight?.phase === 'placement' && (
           <div style={{ background: '#1e3a5f', padding: '6px 12px', fontSize: 13 }}>
-            Placing: <strong>{gameState.placement_next_hero}</strong> — click a blue cell
+            Placing: <strong>{activeFight.placement_next_hero}</strong> — click a blue cell
           </div>
         )}
         {pending && (
           <div style={{ background: '#1e3a5f', padding: '6px 12px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ flex: 1 }}>{interactionLabel(pending)} — click a highlighted cell</span>
             <button
-              onClick={() => dispatch('cancel')}
+              onClick={() => activeDispatch('cancel')}
               disabled={loading}
               style={{ background: '#7f1d1d', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 3 }}
             >
@@ -325,7 +518,7 @@ export default function App() {
             <span style={{ color: '#f1c40f' }}>⚡</span>
             <span style={{ flex: 1, color: '#aaa', fontSize: 11 }}>— Enter to confirm, Esc to cancel</span>
             <button
-              onClick={() => { dispatch('cast_ability', { hero: xCostPrimed.heroName, ability_index: xCostPrimed.abilityIdx, energy: xCostPrimed.energy }); setXCostPrimed(null) }}
+              onClick={() => { activeDispatch('cast_ability', { hero: xCostPrimed.heroName, ability_index: xCostPrimed.abilityIdx, energy: xCostPrimed.energy }); setXCostPrimed(null) }}
               disabled={loading}
               style={{ background: '#6c3483', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 3 }}
             >Cast</button>
@@ -337,11 +530,11 @@ export default function App() {
         )}
 
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          {gameState.map && (
+          {activeFight?.map && (
             <GameBoard
-              mapData={gameState.map}
+              mapData={activeFight.map}
               validCoords={validCoords}
-              pendingType={pending?.type || (gameState.phase === 'placement' ? 'placement' : null)}
+              pendingType={pending?.type || (activeFight.phase === 'placement' ? 'placement' : null)}
               onCellClick={handleCellClick}
               onCellMouseDown={handleCellMouseDown}
               onCellMouseUp={handleCellMouseUp}
@@ -354,7 +547,7 @@ export default function App() {
 
         {/* Log */}
         <div style={{ height: 80, overflowY: 'auto', background: '#0f0f1a', padding: '4px 12px', fontSize: 12, borderTop: '1px solid #333' }}>
-          {(gameState.log || []).slice().reverse().map((msg, i) => (
+          {(activeFight?.log || []).slice().reverse().map((msg, i) => (
             <div key={i} style={{ color: '#aaa', lineHeight: 1.6 }}>{msg}</div>
           ))}
         </div>
@@ -363,13 +556,14 @@ export default function App() {
       {/* Right: boss panel */}
       <div style={{ width: 220, overflowY: 'auto', background: '#16213e', borderLeft: '1px solid #333' }}>
         <BossPanel
-          bossDisplay={gameState.boss_display}
-          phase={gameState.phase}
+          bossDisplay={activeFight?.boss_display}
+          phase={activeFight?.phase}
           pending={pending}
-          dispatch={dispatch}
+          dispatch={activeDispatch}
           loading={loading}
-          mapRound={gameState.map?.current_round}
+          mapRound={activeFight?.map?.current_round}
         />
+      </div>
       </div>
     </div>
   )

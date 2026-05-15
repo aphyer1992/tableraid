@@ -32,4 +32,24 @@ export const api = {
     request('/start', { method: 'POST', body: JSON.stringify({ encounter, heroes }) }),
   action: (type, extra = {}) =>
     request('/action', { method: 'POST', body: JSON.stringify({ type, ...extra }) }),
+
+  // Campaign
+  campaignCreate: (roster) =>
+    request('/campaign/create', { method: 'POST', body: JSON.stringify({ roster }) }),
+  campaignState: () => request('/campaign/state'),
+  campaignParty: (hero_ids) =>
+    request('/campaign/party', { method: 'POST', body: JSON.stringify({ hero_ids }) }),
+  campaignFightStart: () =>
+    request('/campaign/fight/start', { method: 'POST', body: JSON.stringify({}) }),
+  campaignFightAction: (type, extra = {}) =>
+    request('/campaign/fight/action', { method: 'POST', body: JSON.stringify({ type, ...extra }) }),
+  campaignLootAssign: (assignments) =>
+    request('/campaign/loot/assign', { method: 'POST', body: JSON.stringify({ assignments }) }),
+  campaignFightResign: () =>
+    request('/campaign/fight/resign', { method: 'POST', body: JSON.stringify({}) }),
+  campaignRosterAdd: (archetype) =>
+    request('/campaign/roster/add', { method: 'POST', body: JSON.stringify({ archetype }) }),
+  campaignExport: () => request('/campaign/export'),
+  campaignImport: (save_string) =>
+    request('/campaign/import', { method: 'POST', body: JSON.stringify({ save_string }) }),
 }

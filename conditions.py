@@ -7,7 +7,6 @@ tick_down_at_start_hero = [Condition.REGEN, Condition.SHIELDED] # boss shields w
 tick_down_at_end = [Condition.BURN, Condition.BLEED, Condition.STUNNED, Condition.SLOWED]  # conditions that tick down at end of turn
 
 def condition_turn_end_listener(figure):
-    print(f"DEBUG: condition_turn_end_listener called for {figure.name}, conditions: {figure.conditions}")
     # Create a copy of conditions to avoid "dictionary changed during iteration" errors
     conditions_copy = dict(figure.conditions.items())
     for condition, duration in conditions_copy.items():

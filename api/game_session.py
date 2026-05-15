@@ -17,6 +17,18 @@ from coords import Coords
 
 from api.game_controller import GameController
 
+def _resolve_display_names(archetype_names: list[str]) -> list[tuple[str, str]]:
+    """Auto-number duplicate archetypes: ['Mage','Rogue','Mage'] → [('Mage','Mage'),('Rogue','Rogue'),('Mage','Mage 2')]"""
+    from collections import Counter
+    counts = Counter(archetype_names)
+    seen = {}
+    result = []
+    for name in archetype_names:
+        seen[name] = seen.get(name, 0) + 1
+        suffix = '' if counts[name] == 1 or seen[name] == 1 else f' {seen[name]}'
+        result.append((name, name + suffix))
+    return result
+
 # Available encounters by name
 ENCOUNTER_REGISTRY = {}
 try:
@@ -51,24 +63,24 @@ class GameSession:
     # Setup
     # -------------------------------------------------------------------------
 
-    def start(self, encounter_name: str, hero_names: list[str]):
-        """Initialise a new game with selected encounter and hero roster."""
+    def start(self, encounter_name: str, hero_specs: list[tuple[str, str]]):
+        """Initialise a new game. hero_specs is a list of (archetype_name, display_name) tuples."""
         encounter_name = encounter_name.lower()
         if encounter_name not in ENCOUNTER_REGISTRY:
             raise ValueError(f"Unknown encounter '{encounter_name}'. Available: {list(ENCOUNTER_REGISTRY)}")
 
         archetype_by_name = {a['name']: a for a in hero_archetypes}
-        missing = [n for n in hero_names if n not in archetype_by_name]
+        missing = [arch for arch, _ in hero_specs if arch not in archetype_by_name]
         if missing:
             raise ValueError(f"Unknown hero class(es): {missing}")
-        if not hero_names:
+        if not hero_specs:
             raise ValueError("No heroes selected")
 
-        selected_archetypes = [archetype_by_name[n] for n in hero_names]
+        selected_specs = [(archetype_by_name[arch], disp) for arch, disp in hero_specs]
 
         encounter = ENCOUNTER_REGISTRY[encounter_name]()
         self.map = Map(encounter)
-        self.heroes = [Hero(a) for a in selected_archetypes]
+        self.heroes = [Hero(arch, name_override=disp) for arch, disp in selected_specs]
         self.controller = GameController(self.map, self.heroes)
 
         # Expose controller as map.ui so encounter card effects can call it
@@ -79,6 +91,10 @@ class GameSession:
         self.placement_queue = list(self.heroes)
         self.phase = 'placement'
         self.log_messages = [f"Game started: {encounter_name}. Place your heroes."]
+
+    def start_simple(self, encounter_name: str, hero_names: list[str]):
+        """Convenience wrapper: accepts a plain list of archetype names, auto-numbers duplicates."""
+        self.start(encounter_name, _resolve_display_names(hero_names))
 
     # -------------------------------------------------------------------------
     # Actions
@@ -148,16 +164,17 @@ class GameSession:
             raise ValueError(f"Ability '{ability.name}' is not castable right now")
 
         if energy_amount is None:
-            energy_amount = ability.energy_cost
+            energy_amount = ability.effective_cost()
 
         # Validate energy
         if ability.variable_cost:
-            if energy_amount < ability.energy_cost:
-                raise ValueError(f"Must spend at least {ability.energy_cost} energy")
+            if energy_amount < ability.effective_cost():
+                raise ValueError(f"Must spend at least {ability.effective_cost()} energy")
         else:
-            energy_amount = ability.energy_cost
+            energy_amount = ability.effective_cost()
 
         hero.spend_energy(energy_amount)
+        hero.energy_spent_abilities += energy_amount
         move_consumed = ability.move_cost
         attack_consumed = ability.attack_cost
         if ability.move_cost:
@@ -171,6 +188,8 @@ class GameSession:
 
         # Call the effect function with the controller as ui
         ability.effect_fn(hero.figure, energy_amount, ui=self.controller)
+        energy_str = f" ({energy_amount}⚡)" if ability.variable_cost else ""
+        print(f"  {hero_name}: {ability.name}{energy_str}")
         if self.controller.pending_interaction is not None:
             self.controller.pending_interaction['undo'] = {
                 'hero_name': hero_name,

@@ -20,11 +20,8 @@ from encounters.card_effects_across import (
 from figure import Figure, FigureType
 import random
 from coords import Coords
-from encounters.enemy_ai import basic_action
-from game_targeting import TargetingContext
 from game_events import GameEvent
 from game_conditions import Condition
-from combat_helpers import aoe_attack_adjacent, aoe_attack_all_heroes
 from enum import Enum
 from encounters import minions_across
 

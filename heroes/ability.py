@@ -35,31 +35,38 @@ class Ability:
         self.setup_routine = setup_routine
         self.hotkey = hotkey
         self.used = False
+        self.per_fight_used = False  # Set True for once-per-fight abilities; NOT reset by reset_turn()
         self.hero = None  # This will be set when the ability is assigned to a hero
+
+    def effective_cost(self):
+        """Energy cost after modifiers (e.g. Mana Storm Potion reduces all costs by 1)."""
+        return max(0, self.energy_cost + (self.hero.ability_cost_modifier if self.hero else 0))
 
     def is_castable(self):
         if self.passive:
             return False
-        if self.used:
+        if self.used or self.per_fight_used:
             return False
         if not self.hero.activated and not self.usable_off_turn:
             return False
-        if self.hero.current_energy < self.energy_cost:
+        if self.hero.current_energy < self.effective_cost():
             return False
         if self.move_cost and not self.hero.move_available:
             return False
         if self.attack_cost and not self.hero.attack_available:
             return False
-        return True    
+        return True
 
     def cast(self, map, energy_spent):
         if not self.is_castable():
             raise ValueError("Ability cannot be cast")
+        effective = self.effective_cost()
         if self.variable_cost:
-            assert(energy_spent >= self.energy_cost)
+            assert(energy_spent >= effective)
         else:
-            assert(energy_spent == self.energy_cost)
+            assert(energy_spent == effective)
         self.hero.spend_energy(energy_spent)
+        self.hero.energy_spent_abilities += energy_spent
         if self.move_cost:
             self.hero.move_available = False
         if self.attack_cost:
